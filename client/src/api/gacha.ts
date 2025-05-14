@@ -7,7 +7,7 @@ export async function getGachaUrl(): Promise<string> {
   return res.data.url;
 }
 
-export async function fetchGachaLogs(): Promise<any[]> {
+export async function fetchGachaLogs(): Promise<Record<string, any[]>> {
   const res = await API.post('/gacha/fetch');
-  return res.data.logs;
+  return res.data;  
 }

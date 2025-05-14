@@ -5,12 +5,14 @@
     <div v-else>
       <p>总记录数：{{ total }}</p>
       <table>
-        <thead><tr><th>时间</th><th>名称</th><th>类型</th><th>稀有度</th></tr></thead>
+        <thead>
+          <tr><th>时间</th><th>名称</th><th>类型</th><th>稀有度</th></tr>
+        </thead>
         <tbody>
           <tr v-for="log in logs" :key="log.id">
             <td>{{ log.time }}</td>
             <td>{{ log.name }}</td>
-            <td>{{ log.type }}</td>
+            <td>{{ log.gacha_type }}</td>
             <td>{{ log.rank_type }}</td>
           </tr>
         </tbody>
@@ -21,7 +23,7 @@
 
 <script lang="ts">
 import { defineComponent, ref } from 'vue';
-import { getGachaUrl, fetchGachaLogs } from '../api/gacha';
+import { fetchGachaLogs } from '../api/gacha';
 
 export default defineComponent({
   setup() {
@@ -32,11 +34,25 @@ export default defineComponent({
     async function loadData() {
       loading.value = true;
       try {
-        // 可选：先获取 URL
-        await getGachaUrl();
-        const data = await fetchGachaLogs();
-        logs.value = data;
-        total.value = data.length;
+        // 调用 API
+        const dataObj = await fetchGachaLogs();
+        console.log('[GachaAnalyzer] fetchGachaLogs returned:', dataObj);
+
+        // 如果不是对象，直接置空
+        if (!dataObj || typeof dataObj !== 'object') {
+          logs.value = [];
+          total.value = 0;
+          return;
+        }
+
+        // 扁平化所有池子的记录数组
+        const allLogs = Object.values(dataObj).flat();
+        logs.value = allLogs;
+        total.value = allLogs.length;
+      } catch (e) {
+        console.error('加载抽卡记录失败', e);
+        logs.value = [];
+        total.value = 0;
       } finally {
         loading.value = false;
       }

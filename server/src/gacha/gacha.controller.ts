@@ -19,16 +19,17 @@ export class GachaController {
 
   /**
    * POST /gacha/fetch
-   * 一步到位：自动从本地缓存或日志中提取 URL，分页抓取所有抽卡记录并返回。
+   * 自动提取 URL 并分池、分页抓取抽卡记录
+   * 返回格式：{ [gacha_type: string]: GachaLogItem[] }
    */
   @Post('fetch')
-  async fetchLogs(): Promise<{ total: number; logs: any[] }> {
+  async fetchLogs(): Promise<Record<string, any[]>> {
     try {
-      const logs = await this.gachaService.fetchAllLogs();
-      return { total: logs.length, logs };
-    } catch (error: any) {
-      // 将 service 抛出的错误或网络请求错误封装为 BadRequest
-      throw new BadRequestException(error.message || '抓取抽卡日志失败');
+      // fetchAllLogs 已经返回 Record<string, any[]>
+      const result = await this.gachaService.fetchAllLogs();
+      return result;
+    } catch (err: any) {
+      throw new BadRequestException(err.message || '抓取抽卡日志失败');
     }
   }
 }
