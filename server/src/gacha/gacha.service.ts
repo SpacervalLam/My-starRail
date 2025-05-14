@@ -1,44 +1,135 @@
+// server/src/gacha/gacha.service.ts
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import * as fs from 'fs';
 import * as path from 'path';
-import { URL, URLSearchParams } from 'url';
-import { AxiosRequestConfig } from 'axios';
+import * as os from 'os';
 
 @Injectable()
 export class GachaService {
-  private readonly apiDomainMap = {
-    cn: 'https://public-operation-hkrpg.mihoyo.com',
-    global: 'https://public-operation-hkrpg-sg.hoyoverse.com'
-  };
-
   constructor(private readonly httpService: HttpService) {}
 
-  // 游戏路径获取（兼容Unicode路径）
-  private getGamePath(): string | null {
-    const appData = process.env.APPDATA;
-    if (!appData) return null;
+  /** 获取平台对应的 LocalLow 或等效目录，支持 macOS、Windows 和 WSL */
+  private getLocalLowRoot(): string | null {
+    const home = os.homedir();
+    const platform = process.platform;
+    const release = os.release().toLowerCase();
+    const isWSL = platform === 'linux' && release.includes('microsoft');
 
-    const gameDirs = [
-      path.join(appData, '..', 'LocalLow', 'miHoYo', '崩坏：星穹铁道'),
-      path.join(appData, '..', 'LocalLow', 'Cognosphere', 'Star Rail')
-    ];
+    if (platform === 'win32') {
+      console.log('[GetURL] Windows platform');
+      return path.join(home, 'AppData', 'LocalLow');
+    } else if (platform === 'darwin') {
+      console.log('[GetURL] macOS platform');
+      return path.join(home, 'Library', 'Logs');
+    } else if (isWSL) {
+      console.log('[GetURL] WSL detected');
+      // WSL 中的家目录映射到 Windows 用户目录
+      const winUser = process.env.USER || '';
+      const winHome = path.join('/mnt/c/Users', winUser);
+      return path.join(winHome, 'AppData', 'LocalLow');
+    } else {
+      console.log('[GetURL] Unsupported platform');
+      return null;
+    }
+  }
 
-    for (const gameDir of gameDirs) {
-      const logPaths = [
-        path.join(gameDir, 'Player.log'),
-        path.join(gameDir, 'Player-prev.log')
-      ];
+  /** 从日志中提取游戏安装路径 */
+  private getGameInstallPath(): string | null {
+    const root = this.getLocalLowRoot();
+    console.log('[GetURL] LocalLow root:', root);
+    if (!root) return null;
 
-      for (const logPath of logPaths) {
-        if (fs.existsSync(logPath)) {
-          try {
-            const logContent = fs.readFileSync(logPath, 'utf-8');
-            const pathMatch = logContent.match(/Loading player data from (.+?)\/Game\/StarRail_Data\/data\.unity3d/);
-            if (pathMatch) return pathMatch[1];
-          } catch (e) {
-            continue;
+    const candidateDirs = ['miHoYo', 'Cognosphere'];
+    for (const vendor of candidateDirs) {
+      const base = path.join(root, vendor);
+      if (!fs.existsSync(base)) {
+        console.warn('[GetURL] 未找到目录:', base);
+        continue;
+      }
+
+      for (const sub of fs.readdirSync(base)) {
+        if (/StarRail|崩坏：星穹铁道/i.test(sub)) {
+          const tryPaths = [
+            path.join(base, sub, 'Player.log'),
+            path.join(base, sub, 'Player.txt'),
+            path.join(os.homedir(), 'Library', 'Application Support', vendor, sub, 'Player.log'),
+            path.join(os.homedir(), 'Library', 'Application Support', vendor, sub, 'Player.txt'),
+          ];
+          console.log('[GetURL] Try game install path:', tryPaths);
+          for (const logPath of tryPaths) {
+            if (!fs.existsSync(logPath)) continue;
+            const content = fs.readFileSync(logPath, 'utf-8');
+            const marker = 'Loading player data from ';
+            const idx = content.indexOf(marker);
+            if (idx === -1) continue;
+            const substr = content.substring(idx + marker.length);
+            const endMarker = '/Game/StarRail_Data/data.unity3d';
+            const endIdx = substr.indexOf(endMarker);
+            if (endIdx === -1) continue;
+            const installPath = substr.substring(0, endIdx + '/Game/StarRail_Data/'.length);
+            console.log('[GetURL] Found game install path:', installPath);
+            return installPath;
+          }
+        }
+      }
+    }
+    console.warn('[GetURL] 未从日志中找到游戏安装目录');
+    return null;
+  }
+
+  /** 优先从 webCaches/data_2 中提取 URL */
+  private getUrlFromCache(): string | null {
+    const installPath = this.getGameInstallPath();
+    if (!installPath) return null;
+
+    const wc = path.join(installPath, 'webCaches');
+    if (!fs.existsSync(wc)) return null;
+
+    const versions = fs.readdirSync(wc)
+      .filter(v => /^\d+\.\d+\.\d+\.\d+$/.test(v))
+      .sort()
+      .reverse();
+    if (versions.length === 0) return null;
+
+    const cacheFile = path.join(wc, versions[0], 'Cache', 'Cache_Data', 'data_2');
+    if (!fs.existsSync(cacheFile)) return null;
+
+    const raw = fs.readFileSync(cacheFile, 'utf-8');
+    const parts = raw.split('1/0/');
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const ln = parts[i];
+      if (ln.startsWith('http') && ln.includes('getGachaLog')) {
+        return ln.split('\0')[0];
+      }
+    }
+    return null;
+  }
+
+  /** 回退方案：直接在日志中匹配 URL */
+  private getUrlFromLog(): string | null {
+    const root = this.getLocalLowRoot();
+    if (!root) return null;
+
+    const candidateDirs = ['miHoYo', 'Cognosphere'];
+    for (const vendor of candidateDirs) {
+      const base = path.join(root, vendor);
+      if (!fs.existsSync(base)) continue;
+
+      for (const sub of fs.readdirSync(base)) {
+        if (/StarRail|崩坏：星穹铁道/i.test(sub)) {
+          const tryPaths = [
+            path.join(base, sub, 'Player.log'),
+            path.join(base, sub, 'Player.txt'),
+            path.join(os.homedir(), 'Library', 'Application Support', vendor, sub, 'Player.log'),
+            path.join(os.homedir(), 'Library', 'Application Support', vendor, sub, 'Player.txt'),
+          ];
+          for (const logPath of tryPaths) {
+            if (!fs.existsSync(logPath)) continue;
+            const txt = fs.readFileSync(logPath, 'utf-8');
+            const match = txt.match(/https?:\/\/[^\s\r\n]+getGachaLog[^\s\r\n]+auth_appid=webview_gacha[^\s\r\n]+/);
+            if (match) return match[0];
           }
         }
       }
@@ -46,142 +137,41 @@ export class GachaService {
     return null;
   }
 
-  // 缓存文件解析
-  private parseCacheData(gamePath: string): string | null {
-    const cachePath = path.join(
-      gamePath,
-      'webCaches',
-      '2.34.1.0',
-      'Cache',
-      'Cache_Data',
-      'data_2'
-    );
-
-    if (!fs.existsSync(cachePath)) return null;
-
-    try {
-      const cacheData = fs.readFileSync(cachePath, 'utf-8');
-      const urlMatches = cacheData.match(/https?:\/\/[^\?]+?\?[^\?]+?authkey=.+?&game_biz=hkrpg_/g);
-      return urlMatches?.[urlMatches.length - 1] || null;
-    } catch (e) {
-      throw new BadRequestException('Failed to read cache file');
-    }
-  }
-
-  // URL参数处理
-  private processGachaUrl(rawUrl: string): string {
-    const url = new URL(rawUrl);
-    const allowedParams = new Set([
-      'authkey',
-      'authkey_ver',
-      'sign_type',
-      'game_biz',
-      'lang',
-      'auth_appid',
-      'size'
-    ]);
-
-    const newParams = new URLSearchParams();
-    url.searchParams.forEach((value, key) => {
-      if (allowedParams.has(key)) {
-        newParams.set(key, value);
-      }
-    });
-
-    // 确定API域名
-    const host = url.hostname;
-    const isGlobal = host.includes('webstatic-sea') || 
-                    host.includes('hoyoverse.com') ||
-                    host.includes('api-os-takumi');
-    
-    url.protocol = 'https:';
-    url.hostname = isGlobal ? this.apiDomainMap.global : this.apiDomainMap.cn;
-    url.pathname = '/common/gacha_record/api/getGachaLog';
-    url.search = newParams.toString();
-
-    return url.toString();
-  }
-
-  // 获取认证URL
+  /** 获取抽卡记录基础 URL */
   public getGachaUrl(): string {
-    const gamePath = this.getGamePath();
-    if (!gamePath) throw new BadRequestException('Game path not found');
-
-    const rawUrl = this.parseCacheData(gamePath);
-    if (!rawUrl) throw new BadRequestException('Gacha URL not found');
-
-    return 'https://public-operation-hkrpg.mihoyo.com/common/gacha_record/api/getGachaLog?authkey_ver=1&sign_type=2&auth_appid=webview_gacha&lang=zh-cn&authkey=bjkBEwcFRnJIhPqS2eJ2ccO%2fKU%2fhfPNHwkjR0gtsD0lA%2fNqr3R45pJH8U9If3RpPfV6CILTahaitwYSm%2byx4i6lRiQ%2bRP8pCUDOX66rLlwbVgTkh95l3xlvJoO2%2baIRD4b2ymWVLg1LnfhGe%2buty%2bBisqS%2flJBjtN4vnw86LzvQSiesG6n9b5lCoJ6IHN8JtTn8pyKVWV%2bFTvil6cry8S8eByLBGP8%2f%2fpA%2fa9M%2fxe10MzHyv8zXY%2fV%2bPjXfGb92oGH8JA%2b9BKxGZUBUY4Y35OZ33REQqxGL3hdWzMkxbB1IGz2d%2bQld8mwspZkPAiP7DjO5SXcPrUmO8ZADWwTEgV3iXt59BiPlsRga1fNz%2faMljs1Fo3xPUuaXC6irV7V9Gw7o%2fFN7DRoHUpZUSQ1THKgFyC1MPD4akLUYnUcaNH7oF0710wcrl3Zeo0WxHlV5%2bNTOHhKGT0qcyP5%2b5k48YeBWdXVR11vc%2fUn%2bMv6Re%2fThIEu3LYOSAGi4s7b%2fdSwQzo%2bEvJnzoQoPi4Y58DBGKI%2bqYFquLsRILG3Kd4c7Ieh2ua9ZL9aHOirVONkQPvvAO7J9NBvliCjx9zZM6me0ztCuSbAWBnNsXIXTXEfnFYzdjmI8e6BXFYUaR1KWhWDRAUamTIfZfXM6ixdluCKmmTWr5twKYNR%2fD%2bPXHJWhGy%2f0%3d&game_biz=hkrpg_cn&size=5';
-  }
-
-  // 分页获取数据（带重试逻辑）
-  private async fetchPage(url: string, retry = 3): Promise<any> {
-    const config: AxiosRequestConfig = {
-      timeout: 10000,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Referer': 'https://act.mihoyo.com/'
-      }
-    };
-
-    try {
-      const response = await firstValueFrom(
-        this.httpService.get(url, config)
-      );
-      
-      if (response.data.retcode !== 0) {
-        throw new Error(`API Error: ${response.data.message}`);
-      }
-
-      return response.data.data;
-    } catch (error) {
-      if (retry > 0) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        return this.fetchPage(url, retry - 1);
-      }
-      throw new BadRequestException(`Request failed: ${error.message}`);
+    const url = this.getUrlFromCache() || this.getUrlFromLog();
+    if (!url) {
+      console.warn('[GetURL] 无法从缓存或日志中提取抽卡记录 URL');
+      throw new BadRequestException('无法从本地缓存或日志中提取抽卡记录 URL');
     }
+    console.log('[GetURL] Gacha URL:', url);
+    return url;
   }
 
-  // 完整数据获取
-  public async fetchAllLogs(baseUrl: string): Promise<any[]> {
+  /** 抓取单页数据 */
+  private async fetchPage(url: string) {
+    const resp$ = this.httpService.get(url);
+    const res = await firstValueFrom(resp$);
+    if (res.data?.retcode !== 0) {
+      throw new BadRequestException(`抓取失败，retcode=${res.data.retcode}`);
+    }
+    return res.data.data;
+  }
+
+  /** 分页抓取并合并所有抽卡记录 */
+  public async fetchAllLogs(pageSize = 20): Promise<any[]> {
+    const baseUrl = this.getGachaUrl();
+
     let page = 1;
-    let endId = '0';
-    const results = [];
-    const size = 20;
-
+    const all: any[] = [];
     while (true) {
-      const url = `${baseUrl}&page=${page}&size=${size}&end_id=${endId}`;
-      const data = await this.fetchPage(url);
-      
-      if (!data?.list?.length) break;
-
-      results.push(...data.list);
-      endId = data.list[data.list.length - 1].id;
-      
-      // 检查是否继续
-      if (data.list.length < size) break;
+      const pagedUrl = `${baseUrl}&page=${page}&size=${pageSize}`;
+      const data = await this.fetchPage(pagedUrl);
+      const list = data.list ?? [];
+      all.push(...list);
+      if (list.length < pageSize) break;
       page++;
-      
-      // 防止请求过快
-      await new Promise(resolve => setTimeout(resolve, 500));
     }
-
-    return results;
-  }
-
-  // 时区转换（与原Node.js代码兼容）
-  public convertTimeZone(
-    dateTimeStr: string,
-    fromOffset: number,
-    toOffset: number
-  ): string {
-    const date = new Date(dateTimeStr.replace(' ', 'T') + 'Z');
-    const utc = date.getTime() - fromOffset * 3600 * 1000;
-    const target = new Date(utc + toOffset * 3600 * 1000);
-    
-    return target.toISOString()
-      .replace(/T/, ' ')
-      .replace(/\..+/, '')
-      .replace(/-/g, '-');
+    return all;
   }
 }
