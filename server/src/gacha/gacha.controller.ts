@@ -13,7 +13,7 @@ import { GachaLog } from './entities/gacha-log.entity';
 
 @Controller('gacha')
 export class GachaController {
-  constructor(private readonly gachaService: GachaService) {}
+  constructor(private readonly gachaService: GachaService) { }
 
   /**
    * POST /api/gacha/refresh
@@ -49,7 +49,7 @@ export class GachaController {
     }
     return this.gachaService.getLogsFromDb(uid, pool);
   }
-  
+
   /**
    * GET /api/gacha/uids
    * 获取本地数据库中所有 uid 的列表

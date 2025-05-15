@@ -14,7 +14,7 @@ export class GachaService {
     private readonly httpService: HttpService,
     @InjectRepository(GachaLog)
     private readonly logRepo: Repository<GachaLog>,
-  ) {}
+  ) { }
 
   /** 根据平台返回 LocalLow 或等效日志根目录 */
   private getLocalLowRoot(): string | null {

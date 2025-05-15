@@ -1,74 +1,122 @@
 // src/utils/analyzeGacha.ts
 
-export interface GachaLogItem {
-  id: string;
-  uid?: string;
-  gacha_type: string;
-  name: string;
-  rank_type: string;
-  time: string;
-}
-
 export interface GachaAnalysis {
-  total: number;
-  fiveStarCount: number;
-  averagePity: number;
-  fiveStarDetails: {
+  total: number;                // 总抽卡次数
+  fiveStarCount: number;        // 五星数量
+  fourStarCount: number;        // 四星数量
+  fiveStarDetails: {            // 五星详情
     name: string;
     count: number;
-    pulls: number[];
+    pulls: number[];            // 每次出货的抽数间隔
+    lastTime: string;
+  }[];
+  currentPity: number;          // 当前保底计数
+  maxPity: number;              // 最大抽数间隔
+  averagePity: number;          // 平均出货抽数
+  timeline: {                   // 抽卡时间线
+    time: string;
+    name: string;
+    rank: string;
   }[];
 }
 
-/**
- * 对日志进行分析，统计出五星角色的平均间隔、各角色的五星次数、各角色的五星间隔分布
- * @param logsInput 日志数组
- * @returns 分析结果
- */
-export function analyzeGachaLogs(logsInput: any): GachaAnalysis {
-  // 如果 logsInput 不是数组，就改为空数组
-  const logs: GachaLogItem[] = Array.isArray(logsInput)
-    ? logsInput
+export interface GachaLogItem {
+  id: string;
+  uid: string;
+  gacha_type: string;
+  name: string;
+  rank_type: string;
+  time: string;  // ISO 字符串
+}
+
+export interface PoolEntry {
+  poolId: string;
+  logs: GachaLogItem[];
+  analysis: GachaAnalysis;
+}
+
+export function analyzeGachaLogs(logsInput: GachaLogItem[]): GachaAnalysis {
+  // 1. 确保按时间升序
+  const logs = Array.isArray(logsInput)
+    ? [...logsInput].sort((a, b) => Date.parse(a.time) - Date.parse(b.time))
     : [];
 
   const total = logs.length;
-  // 只保留五星
-  const fiveStarLogs = logs.filter(log => log.rank_type === '5');
+  let fiveStarCount = 0;
+  let fourStarCount = 0;
 
-  let pullsSinceLast = 0;
-  const pityList: number[] = [];
-  const detailMap: Map<string, { count: number; pulls: number[] }> = new Map();
+  // Map 用于统计每个五星角色/光锥
+  const fiveStarMap = new Map<
+    string,
+    { count: number; pulls: number[]; lastTime: string }
+  >();
 
+  // pity 相关
+  let sinceLast = 0;
+  const pityRecords: number[] = [];
+
+  // 时间线
+  const timeline = logs.map(log => ({
+    time: log.time,
+    name: log.name,
+    rank: log.rank_type,
+  }));
+
+  // 2. 遍历日志，计算各项指标
   for (const log of logs) {
-    pullsSinceLast++;
+    sinceLast++;
+
     if (log.rank_type === '5') {
-      // 本次五星间隔
-      pityList.push(pullsSinceLast);
+      fiveStarCount++;
+      // 推入间隔
+      pityRecords.push(sinceLast);
 
-      // 更新该角色/光锥的计数
-      const entry = detailMap.get(log.name) || { count: 0, pulls: [] };
+      // 更新详情
+      const entry = fiveStarMap.get(log.name) || { count: 0, pulls: [], lastTime: '' };
       entry.count++;
-      entry.pulls.push(pullsSinceLast);
-      detailMap.set(log.name, entry);
+      entry.pulls.push(sinceLast);
+      entry.lastTime = log.time;
+      fiveStarMap.set(log.name, entry);
 
-      pullsSinceLast = 0;
+      sinceLast = 0; // 重置保底
+    } else if (log.rank_type === '4') {
+      fourStarCount++;
     }
   }
 
-  const fiveStarCount = fiveStarLogs.length;
-  const averagePity =
-    pityList.length > 0
-      ? Math.round(pityList.reduce((sum, v) => sum + v, 0) / pityList.length)
-      : 0;
-
-  const fiveStarDetails = Array.from(detailMap.entries()).map(
-    ([name, { count, pulls }]) => ({ name, count, pulls }),
+  // 3. 构造 fiveStarDetails
+  const fiveStarDetails = Array.from(fiveStarMap.entries()).map(
+    ([name, data]) => ({
+      name,
+      count: data.count,
+      // 按最新到最早排序
+      pulls: data.pulls.slice().reverse(),
+      lastTime: data.lastTime,
+    })
   );
+
+  // 4. 计算 currentPity、maxPity、averagePity
+  const currentPity = sinceLast;
+  const maxPity =
+    pityRecords.length > 0
+      ? Math.max(...pityRecords, currentPity)
+      : currentPity;
+  const averagePity =
+    pityRecords.length > 0
+      ? Math.round(
+          (pityRecords.reduce((sum, v) => sum + v, 0) + currentPity) /
+            (pityRecords.length + 1)
+        )
+      : 0;
 
   return {
     total,
     fiveStarCount,
-    averagePity,
+    fourStarCount,
     fiveStarDetails,
+    currentPity,
+    maxPity,
+    averagePity,
+    timeline, // 已按升序
   };
 }
