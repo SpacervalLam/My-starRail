@@ -20,6 +20,11 @@ export interface GachaAnalysis {
   }[];
 }
 
+/**
+ * 对日志进行分析，统计出五星角色的平均间隔、各角色的五星次数、各角色的五星间隔分布
+ * @param logsInput 日志数组
+ * @returns 分析结果
+ */
 export function analyzeGachaLogs(logsInput: any): GachaAnalysis {
   // 如果 logsInput 不是数组，就改为空数组
   const logs: GachaLogItem[] = Array.isArray(logsInput)

@@ -1,5 +1,3 @@
-// server/src/gacha/gacha.service.ts
-
 import { Injectable, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -167,27 +165,62 @@ export class GachaService {
     }
   }
 
+  private async getLatestTimestamp(uid: string, gachaType: string): Promise<string | null> {
+    const latestLog = await this.logRepo.findOne({
+      where: { uid, gacha_type: gachaType },
+      order: { time: 'DESC' },
+    });
+    return latestLog?.time || null;
+  }
+
   /**
    * 从网络抓取所有记录、存库去重
    */
-  public async fetchAndStoreLogs(): Promise<void> {
+  public async fetchAndStoreLogs(uid: string): Promise<void> {
     const base = this.getGachaUrl();
     const pools = [
       { key: '11', name: '角色活动跃迁' },
       { key: '12', name: '光锥活动跃迁' },
-      { key: '1',  name: '常驻跃迁'     },
-      { key: '2',  name: '新手跃迁'     },
+      { key: '1', name: '常驻跃迁' },
+      { key: '2', name: '新手跃迁' },
     ];
 
     const toInsert: GachaLog[] = [];
 
     for (const p of pools) {
-      let page = 1, endId = '0';
-      while (true) {
+      const maxTime = await this.getLatestTimestamp(uid, p.key);
+      let page = 1;
+      let endId = '0';
+      let hasMore = true;
+
+      while (hasMore) {
         const data = await this.fetchGachaPage(base, p.key, p.name, page, 20, endId);
         const list = data.list ?? [];
-        if (!list.length) break;
-        list.forEach(item => {
+        if (list.length === 0) {
+          hasMore = false;
+          break;
+        }
+
+        let newItems = [];
+        for (const item of list) {
+          if (item.uid !== uid) {
+            console.error(`跳过不属于用户 ${uid} 的记录：${item.id}`);
+            continue;
+          }
+
+          if (maxTime && item.time <= maxTime) {
+            hasMore = false;
+            break;
+          }
+          newItems.push(item);
+        }
+
+        if (newItems.length === 0) {
+          hasMore = false;
+          break;
+        }
+
+        newItems.forEach(item => {
           toInsert.push(this.logRepo.create({
             id: item.id,
             uid: item.uid,
@@ -197,36 +230,53 @@ export class GachaService {
             time: item.time,
           }));
         });
-        endId = list[list.length - 1].id;
-        page++;
+
+        if (newItems.length < list.length) {
+          hasMore = false;
+        } else {
+          endId = list[list.length - 1].id;
+          page++;
+        }
       }
     }
 
-    // 批量插入，忽略重复
     try {
-      await this.logRepo
-        .createQueryBuilder()
-        .insert()
-        .values(toInsert)
-        .orIgnore()
-        .execute();
+      if (toInsert.length > 0) {
+        await this.logRepo
+          .createQueryBuilder()
+          .insert()
+          .values(toInsert)
+          .orIgnore()
+          .execute();
+        console.log(`成功插入 ${toInsert.length} 条新记录`);
+      }
     } catch (err) {
-      console.error('保存抽卡记录到数据库失败:', err);
-      throw new InternalServerErrorException('保存抽卡记录到数据库失败');
+      console.error('保存抽卡记录失败:', err);
+      throw new InternalServerErrorException('保存抽卡记录失败');
     }
-    console.log('成功保存抽卡记录到数据库');
   }
 
   /**
    * 从数据库查询已存记录
    */
   public async getLogsFromDb(uid: string, poolType?: string): Promise<GachaLog[]> {
-    console.log(`从数据库查询 ${uid} 的 ${poolType} 抽卡记录`);
+    console.log(`从数据库查询 ${uid} 的 ${poolType || '所有'} 抽卡记录`);
     const qb = this.logRepo.createQueryBuilder('log')
       .where('log.uid = :uid', { uid });
     if (poolType) {
       qb.andWhere('log.gacha_type = :pool', { pool: poolType });
     }
-    return qb.orderBy('log.time', 'DESC').getMany();
+    const result = await qb.orderBy('log.time', 'DESC').getMany();
+    console.log(`找到 ${result.length} 条记录`);
+    console.log('示例记录(最新一条):', result[0]);
+    return result;
+  }
+
+  public async getAllUids(): Promise<string[]> {
+    return this.logRepo
+      .createQueryBuilder('log')
+      .select('DISTINCT log.uid', 'uid')
+      .getRawMany()
+      .then(res => res.map(item => item.uid));
   }
 }

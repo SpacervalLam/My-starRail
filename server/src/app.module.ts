@@ -10,8 +10,15 @@ import { GachaLog } from './gacha/entities/gacha-log.entity';
       database: 'data/gacha.sqlite',   // 本地文件
       entities: [GachaLog],
       synchronize: true,                // 开发时自动同步
+      logging: true, // 启用所有日志
+      logger: "advanced-console" // 显示参数
     }),
     GachaModule,
   ],
 })
+
+
+
 export class AppModule {}
+
+
