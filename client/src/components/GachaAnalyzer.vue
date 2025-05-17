@@ -1,97 +1,81 @@
 <template>
   <div class="gacha-analyzer">
-    <div class="controls">
-      <!-- UID 选择下拉框 -->
-      <div class="uid-selector">
-        <select v-model="selectedUid" @change="onUidSelect" :disabled="loading">
-          <option value="">选择已有 UID</option>
-          <option v-for="uid in storedUids" :key="uid" :value="uid">
-            {{ uid }}
-          </option>
-        </select>
-        <span class="or">或</span>
-      </div>
-
-      <label>UID：<input v-model="uid" placeholder="输入 UID" maxlength="9"
-          @input="uid = uid.replace(/\D/g, '')" /></label>
-      <button :disabled="!canAnalyze" @click="runAnalysis">{{ loading ? '分析中...' : '开始分析' }}</button>
+    <div class="controls card">
+      <label class="input-group">
+        <span>UID</span>
+        <input list="uidList" v-model="uid" placeholder="选择或输入 UID" maxlength="9" @input="onUidInput"
+          @change="handleDatalistSelect" :disabled="loading" /></label>
+      <datalist id="uidList">
+        <option v-for="stored in storedUids" :key="stored" :value="stored" />
+      </datalist>
+      <button class="btn" :disabled="!canAnalyze" @click="runAnalysis">
+        <template v-if="loading"><i class="icon-loading"></i> 分析中... </template>
+        <template v-else><i class="icon-play"></i> 开始分析 </template>
+      </button>
     </div>
 
-    <div v-if="loading" class="loading">加载中…</div>
+    <div v-if="loading" class="loading"><i class="icon-spinner"></i> 加载中…</div>
 
     <div v-else>
       <!-- 全局统计卡片 -->
-      <div v-if="hasAnyLogs" class="summary-cards"></div>
       <div v-if="hasAnyLogs" class="summary-cards">
-        <div class="card">
+        <div class="card summary-item">
           <h3>🏆 总抽卡次数</h3>
           <div class="value">{{ totalPulls }}</div>
         </div>
-        <div class="card">
+        <div class="card summary-item">
           <h3>⭐ 五星总数</h3>
           <div class="value">{{ totalFiveStar }}</div>
         </div>
+        <div class="card summary-item">
+          <h3>🔋 当前最大保底</h3>
+          <div class="value">{{ maxCurrentPity }}</div>
+        </div>
       </div>
 
-
       <!-- 卡池标签页 -->
-      <div v-if="hasAnyLogs" class="pool-tabs"></div>
       <div v-if="hasAnyLogs" class="pool-tabs">
-        <button v-for="entry in entries" :key="entry.poolId" :class="{ active: activeTab === entry.poolId }"
-          @click="activeTab = entry.poolId">
+        <button v-for="entry in entries" :key="entry.poolId"
+          :class="['tab-btn', { active: activeTab === entry.poolId }]" @click="activeTab = entry.poolId">
           {{ poolNames[entry.poolId] }}
         </button>
       </div>
 
-      <!-- 遍历各个卡池数据 -->
+      <!-- 卡池概览 -->
       <template v-for="entry in entries" :key="entry.poolId">
-        <div v-if="entry.logs.length" class="pool-section">
+        <div v-if="activeTab === entry.poolId && entry.logs.length" class="pool-section card">
           <h2>{{ poolNames[entry.poolId] }}</h2>
-          <p>
-            总抽卡：{{ entry.analysis.total }} 次，
-            五星：{{ entry.analysis.fiveStarCount }} 次，
-            平均出货间隔：{{ entry.analysis.averagePity }} 抽
+          <p class="overview">
+            总抽卡：<strong>{{ entry.analysis.total }}</strong> 次
+            | 五星：<strong>{{ entry.analysis.fiveStarCount }}</strong> 次
+            | 平均出货间隔：<strong>{{ entry.analysis.averagePity }}</strong> 抽
           </p>
           <div class="five-star-details">
-            <div v-for="d in entry.analysis.fiveStarDetails" :key="d.name">
-              <strong>{{ d.name }}</strong>：{{ d.count }} 次 / 抽数 {{ d.pulls.join('，') }}
+            <div v-for="d in entry.analysis.fiveStarDetails" :key="d.name" class="badge-item">
+              <span class="badge name">{{ d.name }}</span>
+              <span class="badge">获得 {{ d.count }} 次</span>
+              <span class="badge">平均 {{ avgPity(d.pulls) }} 抽</span>
             </div>
           </div>
         </div>
       </template>
 
-      <!-- 没有任何记录时显示 -->
-      <div v-if="!hasAnyLogs" class="no-data">
+      <!-- 无数据提示 -->
+      <div v-if="!hasAnyLogs" class="no-data muted">
         {{ uid ? '未找到该 UID 的记录' : '请输入 UID 后点击分析' }}
       </div>
     </div>
 
     <!-- 卡池详情 -->
     <template v-for="entry in entries" :key="entry.poolId">
-      <div v-if="activeTab === entry.poolId && entry.logs.length" class="pool-detail">
-        <!-- 卡池统计 -->
-        <div class="pool-stats">
-          <div class="stat-item">
-            <span class="label">抽卡总数</span>
-            <span class="value">{{ entry.analysis.total }}</span>
-          </div>
-          <div class="stat-item">
-            <span class="label">五星数量</span>
-            <span class="value highlight">{{ entry.analysis.fiveStarCount }}</span>
-          </div>
-          <div class="stat-item">
-            <span class="label">平均出货</span>
-            <span class="value">{{ entry.analysis.averagePity }} 抽</span>
-          </div>
-        </div>
+      <div v-if="activeTab === entry.poolId && entry.logs.length" class="pool-detail card">
 
-        <!-- 五星详情增强 -->
+        <!-- 五星卡详情 -->
         <div class="five-star-section">
-          <h3>五星角色/光锥（共 {{ entry.analysis.fiveStarCount }} 个）</h3>
           <div class="five-star-grid">
             <div v-for="item in entry.analysis.fiveStarDetails" :key="item.name" class="five-star-card"
-              :class="{ 'newest-item': isNewestFiveStar(item, entry) }">
-              <div class="avatar"></div> <!-- 可替换为实际图片 -->
+              :class="{ 'highlight': isNewestFiveStar(item, entry) }">
+              <div class="avatar"></div>
               <div class="detail">
                 <div class="name">{{ item.name }}</div>
                 <div class="stats">
@@ -99,8 +83,7 @@
                   <span class="badge">平均 {{ avgPity(item.pulls) }} 抽</span>
                 </div>
                 <div class="timeline">
-                  <div v-for="(pull, index) in item.pulls" :key="index" class="timeline-item"
-                    :style="{ width: `${pull}%` }">
+                  <div v-for="(pull, index) in item.pulls" :key="index" class="timeline-item" :style="{ flex: pull }">
                     <span class="tooltip">{{ pull }} 抽</span>
                   </div>
                 </div>
@@ -108,18 +91,19 @@
             </div>
           </div>
         </div>
-        <!-- 折叠式详细记录 -->
+
+        <!-- 记录列表 -->
         <div class="expandable-section">
           <div class="header" @click="expanded = !expanded">
             <span>详细抽卡记录（{{ entry.logs.length }} 条）</span>
-            <span class="icon">{{ expanded ? '▼' : '▶' }}</span>
+            <i :class="['icon', expanded ? 'icon-chevron-down' : 'icon-chevron-right']"></i>
           </div>
           <div v-if="expanded" class="content">
             <div class="record-filter">
-              <label>
+              <label class="filter-item">
                 <input type="checkbox" v-model="show5StarOnly" /> 仅显示五星
               </label>
-              <button @click="showCount += 50">加载更多</button>
+              <button class="btn-sm" @click="showCount += 50">加载更多</button>
             </div>
             <div class="compact-records">
               <div v-for="log in filteredLogs(entry.logs)" :key="log.id" class="record-item"
@@ -137,33 +121,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, nextTick } from 'vue';
 import { refreshGachaLogs, fetchGachaLogs, fetchAllUids } from '../api/gacha';
 import { analyzeGachaLogs, GachaLogItem, PoolEntry, GachaAnalysis } from '../utils/analyzeGacha';
 import { format } from 'date-fns';
-import { LineChart } from 'vue-chart-3';
-import { Chart, registerables, ChartData } from 'chart.js';
-Chart.register(...registerables);
 
-
-
-// 1. 状态
 const uid = ref('');
 const loading = ref(false);
 const groupedLogs = ref<Record<string, GachaLogItem[]>>({});
 const analysisResults = ref<Record<string, GachaAnalysis>>({});
 const storedUids = ref<string[]>([]);
-const selectedUid = ref('');
 const loadingUids = ref(false);
-const isValidUid = computed(() => /^[1-9]\d{8}$/.test(uid.value));// UID 有效性校验
-const activeTab = ref('11'); // 默认显示角色活动跃迁
+const activeTab = ref('11');
 const showCount = ref(50);
-const sortKey = ref<'time' | 'name' | 'rank'>('time');
-const sortOrder = ref<'asc' | 'desc'>('desc');
 const expanded = ref(false);
 const show5StarOnly = ref(false);
 
-// 2. 卡池元数据
 const poolOrder = ['11', '12', '1', '2'];
 const poolNames: Record<string, string> = {
   '11': '角色活动跃迁',
@@ -172,85 +145,109 @@ const poolNames: Record<string, string> = {
   '2': '新手跃迁',
 };
 
-// 3. 组合成模板方便用的 entries 数组
 const entries = computed(() =>
   poolOrder.map(poolId => {
     const logs = groupedLogs.value[poolId] || [];
     const analysis = analysisResults.value[poolId] || analyzeGachaLogs([]);
-    return { poolId, logs, analysis } as {
-      poolId: string;
-      logs: GachaLogItem[];
-      analysis: GachaAnalysis;
-    };
+    return { poolId, logs, analysis } as PoolEntry;
   })
 );
+const handleDatalistSelect = (e: Event) => {
+  const target = e.target as HTMLInputElement | null
+  if (!target) return
+  
+  nextTick(() => {
+    target.blur()
+    // 可选：添加边界检查
+    if (target.value.length === 9) {
+      runAnalysis()
+    }
+  })
+}
 
-const latestFiveStar = (entry: PoolEntry): string | undefined => {
-  return entry.analysis.fiveStarDetails[0]?.lastTime;
-};
-
-const isNewestFiveStar = (item: { name: string; lastTime: string }, entry: PoolEntry): boolean =>
-  item.lastTime === latestFiveStar(entry);
+const isNewestFiveStar = (item: { name: string; lastTime: string }, entry: PoolEntry) =>
+  item.lastTime === entry.analysis.fiveStarDetails[0]?.lastTime;
 
 const avgPity = (pulls: number[]) =>
-  Math.round(pulls.reduce((a, b) => a + b, 0) / pulls.length || 0)
+  Math.round(pulls.reduce((a, b) => a + b, 0) / pulls.length || 0);
 
-const filteredLogs = (logs: GachaLogItem[]): GachaLogItem[] => {
-  const sorted = sortedLogs(logs);    // 直接调用函数
-  return sorted
+const filteredLogs = (logs: GachaLogItem[]) =>
+  [...logs]
+    .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
     .filter(log => !show5StarOnly.value || log.rank_type === '5')
     .slice(0, showCount.value);
-};
 
-// 判断有没有数据
-const hasAnyLogs = computed(() => entries.value.some(e => e.logs.length > 0));
+const hasAnyLogs = computed(() => entries.value.some(e => e.logs.length));
 
-// 组件挂载时加载 UID 列表
 onMounted(async () => {
+  loadingUids.value = true;
   try {
-    loadingUids.value = true;
     storedUids.value = await fetchAllUids();
-  } catch (err) {
-    console.error('加载 UID 列表失败:', err);
+  } catch {
     alert('无法获取历史 UID 列表');
   } finally {
     loadingUids.value = false;
   }
 });
 
-// 当下拉框选择时更新输入框
-function onUidSelect(event: Event) {
-  const target = event.target as HTMLSelectElement;
-  uid.value = target.value;
+function onUidInput() {
+  uid.value = uid.value.replace(/\D/g, '');
 }
 
-// 核心逻辑
 async function runAnalysis() {
-  if (!isValidUid.value) {
-    alert('请输入有效的 UID（9位数字，不以0开头）');
-    return;
+  if (!/^[1-9]\d{8}$/.test(uid.value)) {
+    return alert('请输入有效的 UID（9位数字，不以0开头）');
   }
   loading.value = true;
   try {
-    // 拉取并存库
     await refreshGachaLogs(uid.value);
-    // 读取
     const data = await fetchGachaLogs(uid.value);
     groupedLogs.value = data || {};
-    // 分析
-    const res = Object.fromEntries(
-      poolOrder.map(poolId => {
-        const logs = Array.isArray(data?.[poolId]) ? data[poolId] : [];
-
-        return [poolId, analyzeGachaLogs(logs)];
-      })
+    analysisResults.value = Object.fromEntries(
+      poolOrder.map(poolId => [poolId, analyzeGachaLogs(data?.[poolId] || [])])
     );
-
-    analysisResults.value = res;
-
   } catch (e: any) {
-    console.error(e);
-    alert(`操作失败：${e.response?.data?.message || e.message}`);
+    let errorMsg = e.message;
+    // 尝试解析retcode错误
+    const retcodeMatch = e.message.match(/retcode=(-?\d+)/);
+    if (retcodeMatch) {
+      const retcode = parseInt(retcodeMatch[1]);
+      switch (retcode) {
+        case -100:
+          errorMsg = '请求参数错误: 检查URL中是否缺少必填参数或参数格式错误';
+          break;
+        case -101:
+          errorMsg = '认证失败: authkey无效/过期，请登录游戏打开抽卡记录页面获取最新的authkey';
+          break;
+        case -102:
+          errorMsg = '账号权限异常或封禁: 请检查账号安全状态';
+          break;
+        case -103:
+          errorMsg = '接口访问频率过高: 喵的别一直点';
+          break;
+        case -104:
+          errorMsg = '服务器维护或临时故障: 请稍后重试';
+          break;
+        case -105:
+          errorMsg = '数据解析失败: 可能是游戏版本更新导致';
+          break;
+        case -106:
+          errorMsg = '请求超时: 请检查网络连接';
+          break;
+        case -107:
+          errorMsg = '请求路径错误: 确认接口URL是否更新';
+          break;
+        case -108:
+          errorMsg = '客户端版本过低: 请更新游戏客户端';
+          break;
+        case -110:
+          errorMsg = '系统内部错误: 服务器端异常';
+          break;
+        default:
+          errorMsg = '未知错误: 请联系作者spacervallam@gmail.com';
+      }
+    }
+    alert(`操作失败：${errorMsg}`);
     groupedLogs.value = {};
     analysisResults.value = {};
   } finally {
@@ -260,81 +257,10 @@ async function runAnalysis() {
 
 const formatTime = (t: string) => format(new Date(t), 'yyyy-MM-dd HH:mm');
 
-const chartData = (entry: PoolEntry): ChartData<'line'> => ({
-  labels: entry.analysis.timeline.map(t => formatTime(t.time)),
-  datasets: [
-    {
-      label: '抽卡分布',
-      data: entry.analysis.timeline.map((_, i) => i + 1),
-      backgroundColor: '#007bff33',
-      borderColor: '#007bff',
-      borderWidth: 2,
-      pointRadius: 4,
-      pointBackgroundColor: entry.analysis.timeline.map(t =>
-        t.rank === '5' ? '#ffd700' : t.rank === '4' ? '#b57edc' : '#6c757d'
-      )
-    }
-  ]
-});
-
-const chartOptions = {
-  responsive: true,
-  plugins: {
-    legend: {
-      display: false
-    },
-    tooltip: {
-      callbacks: {
-        label: (ctx: any) => `第 ${ctx.parsed.y} 抽 - ${ctx.dataset.pointBackgroundColor[ctx.dataIndex]}星`
-      }
-    }
-  },
-  scales: {
-    x: {
-      display: false
-    },
-    y: {
-      title: {
-        display: true,
-        text: '累计抽数'
-      }
-    }
-  }
-};
-
-
-const sortedLogs = (logs: GachaLogItem[]) => {
-  return [...logs].sort((a, b) => {
-    const modifier = sortOrder.value === 'asc' ? 1 : -1;
-    switch (sortKey.value) {
-      case 'time':
-        return modifier * (new Date(a.time).getTime() - new Date(b.time).getTime());
-      case 'name':
-        return modifier * a.name.localeCompare(b.name);
-      case 'rank':
-        return modifier * (parseInt(b.rank_type) - parseInt(a.rank_type));
-    }
-  }).slice(0, showCount.value);
-};
-
-const sortBy = (key: typeof sortKey.value) => {
-  if (sortKey.value === key) {
-    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
-  } else {
-    sortKey.value = key;
-    sortOrder.value = 'desc';
-  }
-};
-
-const sortIcon = (key: string) =>
-  sortKey.value === key ? (sortOrder.value === 'asc' ? '↑' : '↓') : '';
-
-// 按钮禁用逻辑
 const canAnalyze = computed(() =>
-  isValidUid.value && !loading.value && !loadingUids.value
+  /^[1-9]\d{8}$/.test(uid.value) && !loading.value && !loadingUids.value
 );
 
-// 全局统计计算属性
 const totalPulls = computed(() =>
   entries.value.reduce((sum, e) => sum + e.analysis.total, 0)
 );
@@ -347,60 +273,69 @@ const maxCurrentPity = computed(() =>
 </script>
 
 <style scoped>
+:root {  max-width: 1200px;
+  margin: 0 auto;
+}
+
 .gacha-analyzer {
-  padding: 1rem;
+  padding: 3rem, 5rem;
+  background: var(--bg-light);
+  color: var(--text);
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .controls {
-  margin-bottom: 1rem;
-}
-
-.controls input {
-  width: 180px;
-  margin-right: 0.5rem;
-}
-
-button {
-  padding: 0.5rem 1rem;
-}
-
-.loading {
-  font-style: italic;
-  color: #666;
-}
-
-.pool-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
   margin-bottom: 2rem;
 }
 
-.pool-section h2 {
-  margin: 0.5rem 0;
+.card {
+  background: #fff;
+  border-radius: 12px;
+  place-content: center;
+  padding: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.five-star-details {
-  margin-bottom: 1rem;
+.input-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 1rem;
+.btn {
+  /* 设置按钮为行内弹性布局，垂直居中对齐 */
+  display: inline-flex;
+  align-items: center;
+  /* 设置按钮的内边距为0.6rem 1.2rem */
+  padding: 0.6rem 1.2rem;
+  /* 移除边框 */
+  border: none;
+  /* 设置边框半径为6px，使按钮有圆角 */
+  border-radius: 6px;
+  /* 设置按钮背景颜色为蓝色 */
+  background: #007bff;
+  /* 设置按钮文字颜色为白色 */
+  color: #fff;
+  /* 鼠标悬停时按钮显示为可点击状态 */
+  cursor: pointer;
+  /* 设置背景颜色过渡时间为0.2秒 */
+  transition: background 0.2s;
 }
 
-th,
-td {
-  border: 1px solid #ccc;
-  padding: 0.5rem;
+.btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
 }
 
-.no-data {
-  color: #999;
+.loading {
+  text-align: center;
   font-style: italic;
-}
-
-.error {
-  color: #c00;
-  margin-top: 0.5rem;
 }
 
 .summary-cards {
@@ -410,115 +345,104 @@ td {
   margin-bottom: 2rem;
 }
 
-.card {
-  background: #fff;
-  border-radius: 8px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+.summary-item {
+  text-align: center;
 }
 
-.card h3 {
-  margin: 0 0 0.5rem;
+.summary-item h3 {
+  margin-bottom: 0.5rem;
   font-size: 1rem;
-  color: #666;
+  color: var(--secondary);
 }
 
-.card .value {
-  font-size: 2rem;
+.value {
+  font-size: 2.5rem;
   font-weight: bold;
 }
 
 .pool-tabs {
   display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
+  gap: 1rem;
+  overflow-x: auto;
+  margin-bottom: 1.5rem;
 }
 
-.pool-tabs button {
+.tab-btn {
   padding: 0.5rem 1rem;
-  border-radius: 4px;
-  border: 1px solid #ddd;
-  background: #f8f9fa;
+  border: none;
+  border-radius: 6px;
+  color: #000;
+  background: #e9ecef;
+  cursor: pointer;
 }
 
-.pool-tabs button.active {
+.tab-btn.active {
   background: #007bff;
-  color: white;
-  border-color: #007bff;
+  color: #fff;
+}
+
+.overview {
+  margin: 0.5rem 0;
+  font-size: 0.95rem;
+  color: var(--text);
 }
 
 .five-star-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 1rem;
-}
-
-.five-star-item {
-  background: #fff;
-  padding: 1rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.rank-5 td {
-  background: #fff3cd !important;
-}
-
-.rank-tag {
-  display: inline-block;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  background: var(--rank-color);
-  color: white;
-  font-weight: bold;
-}
-
-.rank-tag[data-rank="5"] {
-  --rank-color: #ffd700;
-}
-
-.rank-tag[data-rank="4"] {
-  --rank-color: #b57edc;
-}
-
-.summary-panel {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-  margin-bottom: 2rem;
-}
-
-.summary-item {
-  background: var(--card-bg);
-  padding: 1rem;
-  border-radius: 8px;
+  margin-top: 1rem;
 }
 
 .five-star-card {
   display: flex;
   gap: 1rem;
   padding: 1rem;
-  background: var(--card-bg);
+  background: #fff;
   border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  position: relative;
+}
+
+.five-star-card.highlight {
+  border: 2px solid var(--rank-5);
 }
 
 .avatar {
   width: 60px;
   height: 60px;
-  background: #eee;
+  background: #dee2e6;
   border-radius: 50%;
+}
+
+.detail {
+  flex: 1;
+}
+
+.stats {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+}
+
+.badge {
+  background: var(--secondary);
+  color: #453;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
 }
 
 .timeline {
   display: flex;
-  height: 4px;
-  background: #eee;
-  border-radius: 2px;
+  gap: 2px;
+  height: 8px;
+  background: #e9ecef;
+  border-radius: 4px;
+  overflow: hidden;
 }
 
 .timeline-item {
-  height: 100%;
-  background: var(--rank-color);
   position: relative;
 }
 
@@ -526,7 +450,13 @@ td {
   visibility: hidden;
   position: absolute;
   bottom: 100%;
-  white-space: nowrap;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
 }
 
 .timeline-item:hover .tooltip {
@@ -535,36 +465,70 @@ td {
 
 .expandable-section {
   margin-top: 2rem;
-  border: 1px solid #eee;
-  border-radius: 8px;
 }
 
 .header {
-  padding: 1rem;
-  cursor: pointer;
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #f1f3f5;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.content {
+  margin-top: 1rem;
+}
+
+.record-filter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.filter-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-sm {
+  padding: 0.3rem 0.8rem;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
 .compact-records {
-  max-height: 400px;
+  max-height: 300px;
   overflow-y: auto;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
 }
 
 .record-item {
   display: flex;
   justify-content: space-between;
-  padding: 0.5rem 1rem;
-  border-bottom: 1px solid #eee;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid #e9ecef;
 }
 
-.rank-tag {
-  font-size: 0.8em;
-  padding: 2px 6px;
+.record-item:last-child {
+  border-bottom: none;
 }
 
-.muted {
-  color: #666;
-  font-size: 0.9em;
+.rank-5 {
+  background: #fff3cd;
+}
+
+.no-data {
+  text-align: center;
+  margin-top: 2rem;
+  font-style: italic;
+  color: var(--secondary);
 }
 </style>

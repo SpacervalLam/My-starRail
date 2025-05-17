@@ -2,7 +2,7 @@ import { IsUrl, IsOptional, IsInt, Min, Max } from 'class-validator';
 
 export class FetchGachaDto {
   @IsUrl()
-  url: string;
+  url?: string;   
 
   @IsOptional()
   @IsInt()

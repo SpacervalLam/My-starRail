@@ -1,0 +1,65 @@
+# Node modules
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Build outputs
+/dist
+/client/dist
+/server/dist
+/dist-client
+/release
+
+# Electron build artifacts
+*.AppImage
+*.exe
+*.dmg
+*.snap
+*.deb
+*.rpm
+*.msi
+*.nupkg
+*.pkg
+*.asar
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment files
+.env
+.env.*.local
+client/.env
+server/.env
+
+# SQLite database
+server/data/*.sqlite
+
+# TypeScript build info
+tsconfig.tsbuildinfo
+server/tsconfig.tsbuildinfo
+
+# IDE and editor folders
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Coverage reports
+coverage/
+.nyc_output/
+
+# Miscellaneous
+*.log
+*.pid
+*.seed
+*.pid.lock

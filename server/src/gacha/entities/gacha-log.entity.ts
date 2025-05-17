@@ -4,20 +4,20 @@ import { Entity, Column, PrimaryColumn, Index } from 'typeorm';
 @Index(['uid', 'id'], { unique: true })
 export class GachaLog {
   @PrimaryColumn()
-  id: string;        // 抽卡记录的唯一 ID
+  id!: string;        // 抽卡记录的唯一 ID
 
   @Column()
-  uid: string;       // 用户 ID
+  uid!: string;       // 用户 ID
 
   @Column()
-  gacha_type: string;
+  gacha_type!: string;
 
   @Column()
-  name: string;
+  name!: string;
 
   @Column()
-  rank_type: string;
+  rank_type!: string;
 
   @Column()
-  time: string;      // 时间戳或 ISO 字符串
+  time!: string;      // 时间戳或 ISO 字符串
 }

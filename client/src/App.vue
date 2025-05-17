@@ -1,7 +1,6 @@
 <template>
   <div id="app">
-    <h1>StarRail 抽卡分析工具</h1>
-    <GachaAnalyzer />
+    <GachaAnalyzer /> 
   </div>
 </template>
 

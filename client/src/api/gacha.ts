@@ -1,11 +1,15 @@
 import axios from 'axios';
 import { group } from 'console';
 
+// const API = axios.create({
+//   baseURL: '/api',
+//   headers: {
+//     'Content-Type': 'application/json', // 确保所有 POST 请求自动设置 JSON 头
+//   },
+// });
+
 const API = axios.create({
-  baseURL: '/api',
-  headers: {
-    'Content-Type': 'application/json', // 确保所有 POST 请求自动设置 JSON 头
-  },
+  baseURL: 'http://localhost:3168/api/',
 });
 
 /**
@@ -13,7 +17,8 @@ const API = axios.create({
  * @param uid 用户的游戏 UID
  */
 export async function refreshGachaLogs(uid: string): Promise<void> {
-  await API.post('/gacha/refresh', { uid });
+  console.log('发送请求：gacha/refresh', uid);
+  await API.post('gacha/refresh', { uid });
 }
 
 /**
@@ -26,7 +31,8 @@ export async function fetchGachaLogs(
   uid: string,
   pool?: string
 ): Promise<Record<string, any[]>> {
-  const res = await API.get('/gacha/logs', {
+  console.log('发送请求：gacha/logs', uid, pool);
+  const res = await API.get('gacha/logs', {
     params: { uid, pool },
   });
   const groupedLogs: Record<string, any[]> = res.data.reduce((acc: { [x: string]: any[]; }, log: { gacha_type: any; }) => {
@@ -37,10 +43,12 @@ export async function fetchGachaLogs(
     acc[type].push(log);
     return acc;
   }, {} as Record<string, any[]>);
+  console.log('收到响应：', groupedLogs);
   return groupedLogs;
 }
 
 export async function fetchAllUids(): Promise<string[]> {
-  const res = await API.get('/gacha/uids');
+  console.log('发送请求：gacha/uids');
+  const res = await API.get('gacha/uids');
   return res.data;
 }

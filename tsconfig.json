@@ -1,0 +1,38 @@
+{
+    "compilerOptions": {
+        "target": "ES2022",
+        "module": "ES2022",
+        "moduleResolution": "node",
+        "baseUrl": ".",
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true,
+        "strict": true,
+        "jsx": "preserve",
+        "sourceMap": true,
+        "resolveJsonModule": true,
+        "lib": [
+            "esnext",
+            "dom"
+        ],
+        "paths": {
+            "@/*": [
+                "./client/src/*"
+            ]
+        },
+        "rootDir": ".",
+        "outDir": "./dist-temp"
+    },
+    "include": [
+        "client/**/*",
+        "server/src/**/*",
+        "electron-main.js",
+        "vite.config.ts"
+    ],
+    "exclude": [
+        "node_modules",
+        "client/dist",
+        "server/dist"
+    ]
+}

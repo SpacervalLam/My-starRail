@@ -10,7 +10,20 @@ import {
 import { GachaService } from './gacha.service';
 import { GachaLog } from './entities/gacha-log.entity';
 
+/**
+ * Health check controller
+ */
+@Controller('health')
+export class HealthController {
+  @Get()
+  check() {
+    return { status: 'ok' };
+  }
+}
 
+/**
+ * Gacha controller
+ */
 @Controller('gacha')
 export class GachaController {
   constructor(private readonly gachaService: GachaService) { }
@@ -31,22 +44,24 @@ export class GachaController {
       return { success: true };
     } catch (err: any) {
       console.error(`刷新 ${uid} 的抽卡记录失败：${err.message}`);
-      throw new InternalServerErrorException(`刷新抽卡记录失败：${err.message}`);
+      return { success: false };
     }
   }
   /**
    * GET /api/gacha/logs?uid=...&pool=...
-   * 从本地数据库读取指定 uid（和可选卡池）的抽卡记录
+   * 从本地数据库读取指定 uid 和（可选）卡池的抽卡记录
    */
   @Get('logs')
   async getLogs(
     @Query('uid') uid: string,
     @Query('pool') pool?: string,
   ): Promise<GachaLog[]> {
+    console.log(`收到客户端请求：查询 ${uid} 的 ${pool || '所有'} 抽卡记录`);
     if (!uid) {
       console.log('uid is not provided');
       throw new BadRequestException('查询参数 uid 为必填项');
     }
+    console.log(`将 ${uid} 的 ${pool || '所有'} 抽卡记录返回给客户端`);
     return this.gachaService.getLogsFromDb(uid, pool);
   }
 
@@ -56,6 +71,7 @@ export class GachaController {
    */
   @Get('uids')
   async getUids(): Promise<string[]> {
+    console.log('将数据库中所有 uid 返回给客户端');
     return this.gachaService.getAllUids();
   }
 }

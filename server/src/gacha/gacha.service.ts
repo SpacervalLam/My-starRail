@@ -48,12 +48,12 @@ export class GachaService {
         const regex = /Loading player data from\s+([A-Za-z]:[\\/][^\r\n]+?StarRail_Data)[\\/]/i;
         const match = content.match(regex);
         if (match && match[1]) {
-          console.log(`Found game install path: ${match[1]}`);
+          console.log(`找到游戏安装路径: ${match[1]}`);
           return match[1] + path.sep;
         }
       }
     }
-    console.log('Cannot find game install path');
+    console.log('无法找到游戏安装路径');
     return null;
   }
 
@@ -141,7 +141,7 @@ export class GachaService {
     size: number,
     endId: string,
     retry = 3
-  ) {
+  ): Promise<{ list: any[]; uid: string; region: string; region_time_zone: string }> {
     const urlObj = new URL(base);
     urlObj.searchParams.set('gacha_type', poolKey);
     urlObj.searchParams.set('page', String(page));
@@ -151,7 +151,42 @@ export class GachaService {
     try {
       const resp = await firstValueFrom(this.httpService.get(url));
       if (resp.data.retcode !== 0) {
-        throw new Error(`retcode=${resp.data.retcode}`);
+        const retcode = resp.data.retcode;
+        let errorMsg = `retcode=${retcode}`;
+        switch (retcode) {
+          case -100:
+            errorMsg = '请求参数错误: 检查URL中是否缺少必填参数或参数格式错误';
+            break;
+          case -101:
+            errorMsg = '认证失败: authkey无效/过期，请登录游戏打开抽卡记录页面获取最新的authkey';
+            break;
+          case -102:
+            errorMsg = '账号权限异常或封禁: 请检查账号安全状态';
+            break;
+          case -103:
+            errorMsg = '接口访问频率过高: 请稍后重试';
+            break;
+          case -104:
+            errorMsg = '服务器维护或临时故障: 请稍后重试';
+            break;
+          case -105:
+            errorMsg = '数据解析失败: 可能是游戏版本更新导致';
+            break;
+          case -106:
+            errorMsg = '请求超时: 请检查网络连接';
+            break;
+          case -107:
+            errorMsg = '请求路径错误: 确认接口URL是否更新';
+            break;
+          case -108:
+            errorMsg = '客户端版本过低: 请更新游戏客户端';
+            break;
+          case -110:
+            errorMsg = '系统内部错误: 服务器端异常';
+            break;
+        }
+        console.error(`获取抽卡记录失败: ${errorMsg}`);
+        throw new Error(errorMsg);
       }
       console.log(`成功获取 ${poolName} 第 ${page} 页`);
       return resp.data.data;
