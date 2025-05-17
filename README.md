@@ -1,55 +1,67 @@
+# 🌠 星穹铁道抽卡分析工具 StarRail Gacha Analyzer
 
-```
-My-starRail
-├─ .npmrc
-├─ build
-│  ├─ icon.ico
-│  ├─ installer
-│  │  ├─ defines.nsh
-│  │  ├─ functions.nsh
-│  │  ├─ main.nsh
-│  │  └─ pages.nsh
-│  ├─ LICENSE.txt
-│  ├─ uninstall.ico
-│  └─ welcome.bmp
-├─ client
-│  ├─ index.html
-│  ├─ public
-│  ├─ src
-│  │  ├─ api
-│  │  │  └─ gacha.ts
-│  │  ├─ App.vue
-│  │  ├─ assets
-│  │  │  └─ vue.svg
-│  │  ├─ components
-│  │  │  └─ GachaAnalyzer.vue
-│  │  ├─ main.js
-│  │  ├─ shims-vue.d.ts
-│  │  ├─ styles
-│  │  │  └─ style.css
-│  │  └─ utils
-│  │     └─ analyzeGacha.ts
-│  └─ tsconfig.json
-├─ electron-main.js
-├─ nest-cli.json
-├─ package-lock.json
-├─ package.json
-├─ README.md
-├─ server
-│  ├─ data
-│  └─ src
-│     ├─ app.module.ts
-│     ├─ gacha
-│     │  ├─ dto
-│     │  │  └─ fetch-gacha.dto.ts
-│     │  ├─ entities
-│     │  │  └─ gacha-log.entity.ts
-│     │  ├─ gacha.controller.ts
-│     │  ├─ gacha.module.ts
-│     │  └─ gacha.service.ts
-│     └─ main.ts
-├─ tsconfig.json
-├─ tsconfig.server.json
-└─ vite.config.ts
+<div align="right">
+  <a href="README.zh-CN.md">简体中文</a> | <a href="README.md">English</a>
+</div>
 
-```
+
+A desktop application for analyzing Honkai: Star Rail gacha logs locally.
+
+## 📖 Usage
+
+**Prerequisite**: Ensure that within the last 24 hours, you have run Honkai: Star Rail on the device where this tool is installed and viewed the gacha history for the account you wish to query.
+
+1. Wait for the program to launch, select or enter the target UID, click the `开始分析` button,
+2. wait for the analysis to complete, then click any item in the gacha record list to view detailed information.
+
+## 🖼️ Screenshots
+
+![Main UI](docs/screenshot1.png)
+
+![Detailed](docs/screenshot2.png)
+
+## ✨ Features
+
+- Automatically extract gacha URLs from log files
+- Analyze 5★ statistics, pity counts, etc.
+- Local database with multi-UID support
+
+
+## 🛠️ Tech Stack
+
+- Frontend: Vue 3 + Vite
+- Backend: NestJS + TypeORM + SQLite
+- Desktop: Electron + electron-builder
+
+## 🚀 Getting Started
+
+Download from [Releases](https://github.com/SpacervalLam/StarRail-toolkit/releases)
+
+- **Portable Version**: Extract the files to any directory and run `StarRail-toolkit.exe`.  
+- **Installer Version**: Run `StarRail-toolkit-Setup-x.x.x.exe`,Follow the steps to complete the installation.  
+
+
+## 🌐 Languages
+
+- Chinese (default)
+
+## 🧩 Development & Build
+
+```bash
+npm install
+npm run dev           # start dev server
+
+npm run dist:win      # build for windows
+npm run dist:mac      # build for mac
+npm run dist:linux    # build for linux
+````
+
+## 📝 Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md)
+
+## 📄 License
+
+MIT License © 2025 [SpacervalLam](https://github.com/SpacervalLam/StarRail-toolkit/blob/main/LICENSE) 
+
+

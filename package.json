@@ -1,7 +1,7 @@
 {
   "name": "My-starRail",
   "version": "1.0.0",
-  "description": "Tools for 崩坏：星穹铁道",
+  "description": "Tools for Honkai: Star Rail",
   "main": "electron-main.js",
   "author": "SpacervalLam <spacervallam@gmail.com>",
   "homepage": "https://github.com/SpacervalLam/My-starRail",
@@ -13,7 +13,7 @@
     "dist:win": "npm run build:electron -- --windows",
     "dist:mac": "npm run build:electron -- --mac",
     "dist:linux": "npm run build:electron -- --linux",
-    "start:dev": "concurrently \"npm:dev:*\"",
+    "start:dev": "concurrently \"npm run dev:client\" \"npm run dev:server\" \"npm run dev:electron\"",
     "dev:client": "cd client && vite",
     "dev:server": "nest start --watch -p tsconfig.server.json",
     "dev:electron": "electron ."
@@ -59,7 +59,10 @@
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/uninstall.ico",
       "installerHeaderIcon": "build/icon.ico",
-      "include": "build/installer/main.nsh"
+      "script": null,
+      "allowToChangeInstallationDirectory": true,
+      "installerSidebar": "build/banner_welcome.bmp",
+      "installerHeader": "build/banner_header.bmp"
     },
     "appId": "io.github.SpacervalLam.StarRail-toolkit",
     "files": [

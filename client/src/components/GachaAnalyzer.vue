@@ -50,13 +50,6 @@
             | 五星：<strong>{{ entry.analysis.fiveStarCount }}</strong> 次
             | 平均出货间隔：<strong>{{ entry.analysis.averagePity }}</strong> 抽
           </p>
-          <div class="five-star-details">
-            <div v-for="d in entry.analysis.fiveStarDetails" :key="d.name" class="badge-item">
-              <span class="badge name">{{ d.name }}</span>
-              <span class="badge">获得 {{ d.count }} 次</span>
-              <span class="badge">平均 {{ avgPity(d.pulls) }} 抽</span>
-            </div>
-          </div>
         </div>
       </template>
 
@@ -95,7 +88,7 @@
         <!-- 记录列表 -->
         <div class="expandable-section">
           <div class="header" @click="expanded = !expanded">
-            <span>详细抽卡记录（{{ entry.logs.length }} 条）</span>
+            <span>展开详细抽卡记录（{{ entry.logs.length }} 条）</span>
             <i :class="['icon', expanded ? 'icon-chevron-down' : 'icon-chevron-right']"></i>
           </div>
           <div v-if="expanded" class="content">
@@ -408,6 +401,10 @@ const maxCurrentPity = computed(() =>
   border: 2px solid var(--rank-5);
 }
 
+.four-star-card.highlight {
+  border: 2px solid var(--rank-4);
+}
+
 .avatar {
   width: 60px;
   height: 60px;
@@ -423,6 +420,8 @@ const maxCurrentPity = computed(() =>
   display: flex;
   gap: 0.5rem;
   margin: 0.5rem 0;
+  place-items: center;
+  place-content: center;
 }
 
 .badge {
@@ -431,6 +430,8 @@ const maxCurrentPity = computed(() =>
   padding: 0.3rem 0.6rem;
   border-radius: 4px;
   font-size: 0.85rem;
+  place-content: center;
+  place-items: center;
 }
 
 .timeline {
@@ -496,8 +497,8 @@ const maxCurrentPity = computed(() =>
 
 .btn-sm {
   padding: 0.3rem 0.8rem;
-  background: var(--primary);
-  color: #fff;
+  background: #fff;
+  color: #000;
   border: none;
   border-radius: 4px;
   cursor: pointer;
@@ -523,6 +524,10 @@ const maxCurrentPity = computed(() =>
 
 .rank-5 {
   background: #fff3cd;
+}
+
+.rank-4 {
+  background: #CCCCFF;
 }
 
 .no-data {
