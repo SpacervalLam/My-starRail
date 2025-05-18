@@ -37,8 +37,8 @@
 ## 🚀 安装与运行
 
 从 [Releases](https://github.com/SpacervalLam/StarRail-toolkit/releases) 页面下载
-- **绿色版**：解压到任意目录，运行 `StarRail-toolkit.exe`
-- **安装版**：运行 `StarRail-toolkit-Setup-x.x.x.exe` ，根据提示完成安装
+- **绿色版**：下载并解压`My-starRail.1.0.0.zip`到任意目录，运行 `My-starRail.exe`
+- **安装版**：运行 `My-starRail.Setup.1.0.0.exe` ，根据提示完成安装
 
 ## 🌐 语言
 

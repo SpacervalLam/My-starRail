@@ -37,8 +37,8 @@ A desktop application for analyzing Honkai: Star Rail gacha logs locally.
 
 Download from [Releases](https://github.com/SpacervalLam/StarRail-toolkit/releases)
 
-- **Portable Version**: Extract the files to any directory and run `StarRail-toolkit.exe`.  
-- **Installer Version**: Run `StarRail-toolkit-Setup-x.x.x.exe`,Follow the steps to complete the installation.  
+- **Portable Version**: Download and unzip the file `My-starRail. 1.0.0. zip` to any directory, and run `My-starRail. exe`
+- **Installer Version**: Run `My-starRail.Setup.1.0.0.exe`,Follow the steps to complete the installation.  
 
 
 ## 🌐 Languages
