@@ -59,23 +59,28 @@ export class GachaService {
 
   /** 只保留核心参数并重建基础 URL */
   private sanitizeUrl(rawUrl: string): string {
-    const urlObj = new URL(rawUrl);
-    const keepKeys = [
-      'authkey_ver',
-      'sign_type',
-      'auth_appid',
-      'lang',
-      'authkey',
-      'game_biz',
-      'size'
-    ];
-    const base = urlObj.origin + urlObj.pathname;
-    const params = new URLSearchParams();
-    for (const key of keepKeys) {
-      const v = urlObj.searchParams.get(key);
-      if (v) params.set(key, v);
+    try {
+      const urlObj = new URL(rawUrl);
+      const keepKeys = [
+        'authkey_ver',
+        'sign_type',
+        'auth_appid',
+        'lang',
+        'authkey',
+        'game_biz',
+        'size'
+      ];
+      const base = urlObj.origin + urlObj.pathname;
+      const params = new URLSearchParams();
+      for (const key of keepKeys) {
+        const v = urlObj.searchParams.get(key);
+        if (v) params.set(key, v);
+      }
+      return `${base}?${params.toString()}`;
+    } catch (err) {
+      console.error(`Invalid URL format: ${rawUrl}`);
+      throw new BadRequestException('Invalid URL format');
     }
-    return `${base}?${params.toString()}`;
   }
 
   /** 从缓存文件 data_2 提取 URL */
@@ -124,15 +129,24 @@ export class GachaService {
   }
 
   /** 获取并 sanitize 基础 URL */
-  public getGachaUrl(): string {
-    const raw = this.getUrlFromCache() || this.getUrlFromLog();
+  public getGachaUrl(url?: string): string {
+    const raw = url || this.getUrlFromCache() || this.getUrlFromLog();
     if (!raw) {
       throw new BadRequestException('无法提取抽卡记录 URL');
     }
     return this.sanitizeUrl(raw);
   }
 
-  /** 单页抓取 with 重试 */
+  /** 单页抓取 with 重试 
+   * @param base 基础 URL
+   * @param poolKey 抽卡池类型
+   * @param poolName 抽卡池名称
+   * @param page 页码
+   * @param size 每页大小
+   * @param endId 结束 ID
+   * @param retry 重试次数
+   * @returns {Promise<{list: any[], uid: string, region: string, region_time_zone: string}>} 抽卡记录列表: {list: any[], uid: string, region: string, region_time_zone: string}
+  */
   private async fetchGachaPage(
     base: string,
     poolKey: string,
@@ -209,7 +223,112 @@ export class GachaService {
   }
 
   /**
-   * 从网络抓取所有记录、存库去重
+     * 根据 URL 从网络抓取指定记录、存库去重
+     */
+  public async fetchAndStoreLogsByUrl(url: string): Promise<string> {
+    let base: string;
+    try {
+      base = this.getGachaUrl(url);
+    } catch (err) {
+      throw new BadRequestException('你不是在乱填吧？');
+    }
+
+    const pools = [
+      { key: '11', name: '角色活动跃迁' },
+      { key: '12', name: '光锥活动跃迁' },
+      { key: '1', name: '常驻跃迁' },
+      { key: '2', name: '新手跃迁' },
+    ];
+
+    const toInsert: GachaLog[] = [];
+    let uid: string | null = null;
+
+    for (const p of pools) {
+      let page = 1;
+      let endId = '0';
+      let hasMore = true;
+
+      while (hasMore) {
+        let fetchResult: any;
+        try {
+          fetchResult = await this.fetchGachaPage(
+            base, p.key, p.name, page, 20, endId
+          );
+        } catch (err) {
+          console.error(`获取 ${p.name} 第 ${page} 页记录失败:`, err);
+          break;
+        }
+
+        // 安全提取 list
+        const list: GachaLog[] = fetchResult.list || [];
+        if (list.length === 0) break;
+
+        // 从首条记录中提取 uid
+        const fetchedUid = list[0].uid;
+        if (!uid) {
+          uid = fetchedUid;
+          console.log(`提取到 UID: ${uid}`);
+        }
+
+        // 拿到该 UID 在数据库已有的最新时间
+        const maxTime = await this.getLatestTimestamp(uid, p.key);
+
+        const newItems: GachaLog[] = [];
+        for (const item of list) {
+          if (maxTime && item.time <= maxTime) {
+            hasMore = false;
+            break;
+          }
+          newItems.push(item);
+        }
+
+        if (newItems.length === 0) break;
+
+        // 累积待插入数据
+        for (const item of newItems) {
+          toInsert.push({
+            id: item.id,
+            uid: item.uid,
+            gacha_type: item.gacha_type,
+            name: item.name,
+            rank_type: item.rank_type,
+            time: item.time,
+            item_id: item.item_id,
+          });
+        }
+
+        if (newItems.length < list.length) {
+          hasMore = false;
+        } else {
+          endId = list[list.length - 1].id;
+          page++;
+        }
+      }
+    }
+
+    if (!uid) {
+      throw new BadRequestException('无法从记录中提取用户ID');
+    }
+
+    try {
+      if (toInsert.length) {
+        await this.logRepo
+          .createQueryBuilder()
+          .insert()
+          .values(toInsert)
+          .orIgnore()
+          .execute();
+      }
+      return uid;
+    } catch (err) {
+      console.error('保存抽卡记录失败:', err);
+      throw new InternalServerErrorException('保存抽卡记录失败');
+    }
+  }
+
+
+  /**
+   * 根据 UID 从网络抓取所有记录、存库去重
    */
   public async fetchAndStoreLogs(uid: string): Promise<void> {
     const base = this.getGachaUrl();
@@ -263,6 +382,7 @@ export class GachaService {
             name: item.name,
             rank_type: item.rank_type,
             time: item.time,
+            item_id: item.item_id
           }));
         });
 

@@ -20,4 +20,7 @@ export class GachaLog {
 
   @Column()
   time!: string;      // 时间戳或 ISO 字符串
+
+  @Column()
+  item_id!: string;   // 物品 ID
 }

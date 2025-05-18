@@ -30,7 +30,9 @@ export class GachaController {
 
   /**
    * POST /api/gacha/refresh
-   * 从网络拉取最新抽卡记录并保存到本地数据库
+   * 根据uid从网络拉取最新抽卡记录并保存到本地数据库
+   * @param body
+   * @returns 
    */
   @Post('refresh')
   async refreshLogs(@Body() body: { uid: string }): Promise<{ success: boolean }> {
@@ -47,6 +49,32 @@ export class GachaController {
       return { success: false };
     }
   }
+
+  /**
+   * Post /api/gacha/refresh/url
+   * 根据url从网络拉取最新抽卡记录并保存到本地数据库
+   * @param body 
+   * @returns 
+   */
+  @Post('refresh/url')
+  async refreshLogsByUrl(@Body() body: { url: string }): Promise<{ success: boolean; uid?: string; message?: string }> {
+    const { url } = body;
+    if (!url) {
+      return { success: false, message: 'url 为必填项' };
+    }
+    try {
+      const uid = await this.gachaService.fetchAndStoreLogsByUrl(url);
+      console.log(`通过URL刷新抽卡记录成功，UID: ${uid}`);
+      return { success: true, uid };
+    } catch (err: any) {
+      console.error(`通过URL刷新抽卡记录失败：${err.message}`);
+      if (err instanceof BadRequestException) {
+        return { success: false, message: '你该不会在乱填？' };
+      }
+      return { success: false, message: '请检查URL是否正确' };
+    }
+  }
+  
   /**
    * GET /api/gacha/logs?uid=...&pool=...
    * 从本地数据库读取指定 uid 和（可选）卡池的抽卡记录
