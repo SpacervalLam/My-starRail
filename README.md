@@ -14,11 +14,14 @@ A desktop application for analyzing Honkai: Star Rail gacha logs locally.
 1. Wait for the program to launch, select or enter the target UID, click the `开始分析` button,
 2. wait for the analysis to complete, then click any item in the gacha record list to view detailed information.
 
+P.S.: I forgot to handle port conflicts. Before launching, check if any other program is using port 3168.
+P.P.S.: 3168 is the first four digits of my QQ number.
+
 ## 🖼️ Screenshots
 
-![Main UI](docs/screenshot1.png)
+![Settings](docs/screenshot1.png)
 
-![Detailed](docs/screenshot2.png)
+![Main UI](docs/screenshot2.gif)
 
 ## ✨ Features
 
@@ -43,7 +46,9 @@ Download from [Releases](https://github.com/SpacervalLam/StarRail-toolkit/releas
 
 ## 🌐 Languages
 
-- Chinese (default)
+- 中文 (default)
+- English
+- 日本語
 
 ## 🧩 Development & Build
 

@@ -1,55 +1,62 @@
 <template>
+  <NavBar />
+  <router-view />
   <div class="gacha-analyzer">
+    <!-- 控制区：UID/URL 切换与输入 -->
     <div class="control-cards-container">
       <div class="control-card" :class="{ active: queryMode === 'uid', flipped: queryMode === 'url' }">
-        <!-- FRONT: UID mode -->
+        <!-- FRONT: UID 模式 -->
         <div class="card-face card-front">
           <label class="input-group">
-            <span @click="queryMode = 'url'">UID</span>
-            <input list="uidList" v-model="uid" placeholder="选择或输入 UID" maxlength="9" @input="onUidInput"
-              @change="handleDatalistSelect" @click.stop :disabled="loading" />
+            <span @click="queryMode = 'url'">{{ t('controls.uidLabel') }}</span>
+            <input list="uidList" v-model="uid" :placeholder="t('controls.uidPlaceholder')" maxlength="9"
+              @input="onUidInput" @change="handleDatalistSelect" @click.stop :disabled="loading" />
           </label>
           <datalist id="uidList">
             <option v-for="stored in storedUids" :key="stored" :value="stored" />
           </datalist>
         </div>
-
-        <!-- BACK: URL mode -->
+        <!-- BACK: URL 模式 -->
         <div class="card-face card-back">
           <label class="input-group">
-            <span @click="queryMode = 'uid'">URL</span>
-            <input v-model="gachaUrl" placeholder="输入抽卡记录URL" @click.stop :disabled="loading" />
+            <span @click="queryMode = 'uid'">{{ t('controls.urlLabel') }}</span>
+            <input v-model="gachaUrl" :placeholder="t('controls.urlPlaceholder')" @click.stop :disabled="loading" />
           </label>
         </div>
       </div>
-      <!-- “开始分析”按钮 -->
+      <!-- 分析按钮 -->
       <button class="btn analyze-btn" :disabled="loading || (queryMode === 'uid' ? !canAnalyze : !gachaUrl)"
         @click="runAnalysis">
         <template v-if="loading">
-          <i class="icon-loading"></i> 分析中...
+          <i class="icon-loading"></i> {{ t('controls.analyzing') }}
         </template>
         <template v-else>
-          <i class="icon-play"></i> 开始分析
+          <i class="icon-play"></i> {{ t('controls.analyze') }}
         </template>
       </button>
     </div>
 
-    <div v-if="loading" class="loading"><i class="icon-spinner"></i> 加载中…</div>
-    <div v-if="loading" class="loading"><img src="/src/assets/gif/loading.gif" alt="Loading..." /></div>
+    <!-- 全局 Loading 显示 -->
+    <div v-if="loading" class="loading">
+      <i class="icon-spinner"></i> {{ t('controls.loading') }}
+    </div>
+
+    <div v-if="loading" class="loading"><img src="/assets/gif/loading.gif" alt="Loading..." /></div>
+
 
     <div v-else>
       <!-- 全局统计卡片 -->
       <div v-if="hasAnyLogs" class="summary-cards">
         <div class="card summary-item">
-          <h3>🏆 总抽卡次数</h3>
+          <h3>🏆 {{ t('summary.totalPulls') }}</h3>
           <div class="value">{{ totalPulls }}</div>
         </div>
         <div class="card summary-item">
-          <h3>⭐ 五星总数</h3>
+          <h3>⭐ {{ t('summary.fiveStar') }}</h3>
           <div class="value">{{ totalFiveStar }}</div>
         </div>
         <div class="card summary-item">
-          <h3>🔋 当前最大保底</h3>
+          <h3>🔋 {{ t('summary.currentPity') }}</h3>
           <div class="value">{{ maxCurrentPity }}</div>
         </div>
       </div>
@@ -58,18 +65,20 @@
       <div v-if="hasAnyLogs" class="pool-tabs">
         <button v-for="entry in entries" :key="entry.poolId"
           :class="['tab-btn', { active: activeTab === entry.poolId }]" @click="activeTab = entry.poolId">
-          {{ poolNames[entry.poolId] }}
+          {{ t(`pools.${entry.poolId}`) }}
         </button>
       </div>
 
       <!-- 卡池概览 -->
       <template v-for="entry in entries" :key="entry.poolId">
         <div v-if="activeTab === entry.poolId && entry.logs.length" class="pool-section card">
-          <h2>{{ poolNames[entry.poolId] }}</h2>
+          <h2>{{ t(`pools.${entry.poolId}`) }}</h2>
           <p class="overview">
-            总抽卡：<strong>{{ entry.analysis.total }}</strong> 次
-            | 五星：<strong>{{ entry.analysis.fiveStarCount }}</strong> 次
-            | 平均出货间隔：<strong>{{ entry.analysis.averagePity }}</strong> 抽
+            {{ t('overview', {
+              total: entry.analysis.total,
+              fiveStar: entry.analysis.fiveStarCount,
+              avg: entry.analysis.averagePity
+            }) }}
           </p>
         </div>
       </template>
@@ -77,29 +86,33 @@
       <!-- 无数据提示 -->
       <div v-if="!hasAnyLogs" class="no-data muted message">
         {{ uid
-          ? '未找到该 UID 的记录\n请确认后再试'
-          : '请输入 UID后点击分析\n点击 UID/URL 切换模式'
+          ? t('controls.noData')
+          : t('controls.inputModeTip')
         }}
       </div>
 
       <!-- 卡池详情 -->
       <template v-for="entry in entries" :key="entry.poolId">
         <div v-if="activeTab === entry.poolId && entry.logs.length" class="pool-detail card">
-          <!-- 五星卡详情 -->
+          <!-- 五星详情 -->
           <div class="five-star-section">
             <div class="five-star-grid">
               <div v-for="item in entry.analysis.fiveStarDetails" :key="item.name" class="five-star-card"
                 :class="{ highlight: isNewestFiveStar(item, entry) }">
-                <img class="avatar" :src="`/src/assets/avatars/${item.item_id}.png`" :alt="item.name" />
+                <img class="avatar" :src="`/assets/avatars/${item.item_id}.png`" :alt="item.name" />
                 <div class="detail">
                   <div class="name">{{ item.name }}</div>
                   <div class="stats">
-                    <span class="badge">获得 {{ item.count }} 次</span>
-                    <span class="badge">平均 {{ avgPity(item.pulls) }} 抽</span>
+                    <span class="badge">
+                      {{ t('records', {
+                        count: item.count,
+                        avg: avgPity(item.pulls)
+                      }) }}
+                    </span>
                   </div>
                   <div class="timeline">
-                    <div v-for="(pull, index) in item.pulls" :key="index" class="timeline-item" :style="{ flex: pull }">
-                      <span class="tooltip">{{ pull }} 抽</span>
+                    <div v-for="(pull, idx) in item.pulls" :key="idx" class="timeline-item" :style="{ flex: pull }">
+                      <span class="tooltip">{{ pull }} {{ t('controls.pulls') }}</span>
                     </div>
                   </div>
                 </div>
@@ -107,18 +120,18 @@
             </div>
           </div>
 
-          <!-- 记录列表 -->
+          <!-- 展开记录列表 -->
           <div class="expandable-section">
             <div class="header" @click="expanded = !expanded">
-              <span>展开详细抽卡记录（{{ entry.logs.length }} 条）</span>
+              <span>{{ t('expand.expandRecords', { count: entry.logs.length }) }}</span>
               <i :class="['icon', expanded ? 'icon-chevron-down' : 'icon-chevron-right']"></i>
             </div>
             <div v-if="expanded" class="content">
               <div class="record-filter">
                 <label class="filter-item">
-                  <input type="checkbox" v-model="show5StarOnly" /> 仅显示五星
+                  <input type="checkbox" v-model="show5StarOnly" /> {{ t('filter.only5') }}
                 </label>
-                <button class="btn-sm" @click="showCount += 50">加载更多</button>
+                <button class="btn-sm" @click="showCount += 50">{{ t('filter.loadMore') }}</button>
               </div>
               <div class="compact-records">
                 <div v-for="log in filteredLogs(entry.logs)" :key="log.id" class="record-item"
@@ -138,12 +151,14 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue';
+import { useI18n } from 'vue-i18n';
 import {
   refreshGachaLogs,
   fetchGachaLogs,
   fetchAllUids,
   refreshGachaLogsFromUrl,
 } from '../api/gacha';
+import NavBar from '@/components/NavBar.vue';
 import {
   analyzeGachaLogs,
   GachaLogItem,
@@ -151,6 +166,11 @@ import {
   GachaAnalysis,
 } from '../utils/analyzeGacha';
 import { format } from 'date-fns';
+
+const { t } = useI18n({
+  useScope: 'global',
+  inheritLocale: true
+})
 
 const uid = ref('');
 const gachaUrl = ref('');
@@ -319,6 +339,7 @@ const isNewestFiveStar = (
   padding: 0 1rem;
   font-family: 'Helvetica Neue', Arial, sans-serif;
   color: var(--text);
+  padding-top: 50px;
 }
 
 .control-cards-container {
@@ -421,6 +442,7 @@ const isNewestFiveStar = (
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   margin-bottom: 3rem;
+  justify-items: center;
 }
 
 .summary-item {
@@ -444,6 +466,7 @@ const isNewestFiveStar = (
   gap: 1rem;
   overflow-x: auto;
   margin-bottom: 1.5rem;
+  justify-content: center;
 }
 
 .tab-btn {
@@ -462,25 +485,32 @@ const isNewestFiveStar = (
 
 .pool-section {
   margin-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .overview {
   margin: 0.5rem 0;
   font-size: 0.95rem;
   color: var(--text);
+  text-align: center;
 }
 
 .five-star-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1rem;
   margin-top: 1rem;
+  place-items: center;
+  justify-content: center;
 }
 
 .five-star-card {
   display: flex;
   gap: 1rem;
   padding: 1rem;
+  width: 100%;
   background: #fff;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
@@ -500,14 +530,17 @@ const isNewestFiveStar = (
 
 .detail {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
+
 
 .stats {
   display: flex;
   gap: 0.5rem;
   margin: 0.5rem 0;
-  place-items: center;
-  place-content: center;
+  justify-content: center;
 }
 
 .badge {

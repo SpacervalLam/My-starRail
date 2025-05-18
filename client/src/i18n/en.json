@@ -1,0 +1,56 @@
+{
+  "controls": {
+    "uidLabel": "UID",
+    "urlLabel": "URL",
+    "uidPlaceholder": "Select or enter UID",
+    "urlPlaceholder": "Enter gacha record URL",
+    "analyze": "Analyze",
+    "analyzing": "Analyzing...",
+    "loading": "Loading…",
+    "noData": "No records found, please check and retry",
+    "inputModeTip": "Enter UID then click Analyze\nClick UID/URL to switch mode"
+  },
+  "summary": {
+    "totalPulls": "Total Pulls",
+    "fiveStar": "5★ Count",
+    "currentPity": "Current Max Pity"
+  },
+  "pools": {
+    "11": "Character Warp",
+    "12": "Light Cone Warp",
+    "1": "Standard Warp",
+    "2": "Beginner Warp"
+  },
+  "overview": "Total: {total}\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0 5★: {fiveStar}\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0Avg Pity: {avg}",
+  "expand": {
+    "expandRecords": "Show detailed logs ({count})"
+  },
+  "records": "{count} times\u00A0\u00A0\u00A0\u00A0\u00A0Avg {avg} pulls",
+  "filter": {
+    "only5": "5★ Only",
+    "loadMore": "Load More"
+  },
+  "navbar": {
+    "title": "My-starRail",
+    "logoAlt": "Application Logo",
+    "menuButton": "Open navigation menu",
+    "language": "Language",
+    "settings": "Settings"
+  },
+  "settings": {
+    "title": "Settings",
+    "save": "Save",
+    "cancel": "Cancel",
+    "theme": "Theme",
+    "themeDesc": "Select the appearance theme of the application",
+    "system": "Follow System",
+    "light": "Light Theme",
+    "dark": "Dark Theme",
+    "notifications": "Notifications",
+    "notificationsDesc": "Enable or disable system notifications",
+    "volume": "Volume",
+    "volumeDesc": "Adjust the application's prompt sound volume",
+    "language": "Language",
+    "languageDesc": "Select the display language of the interface"
+  }
+}

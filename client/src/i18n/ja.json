@@ -1,0 +1,56 @@
+{
+    "controls": {
+        "uidLabel": "UID",
+        "urlLabel": "URL",
+        "uidPlaceholder": "UIDを選択または入力",
+        "urlPlaceholder": "ガチャ履歴のURLを入力",
+        "analyze": "解析",
+        "analyzing": "解析中...",
+        "loading": "読み込み中…",
+        "noData": "記録が見つかりません。確認して再試行してください。",
+        "inputModeTip": "UIDを入力して「解析」をクリック\nUID/URLをクリックしてモードを切り替え"
+    },
+    "summary": {
+        "totalPulls": "総ガチャ回数",
+        "fiveStar": "★5の数",
+        "currentPity": "現在の最大天井"
+    },
+    "pools": {
+        "11": "キャラクターガチャ",
+        "12": "光円錐ガチャ",
+        "1": "通常ガチャ",
+        "2": "初心者ガチャ"
+    },
+    "overview": "合計: {total}\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0★5: {fiveStar}\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0平均天井: {avg}",
+    "expand": {
+        "expandRecords": "詳細ログを表示 ({count})"
+    },
+    "records": "{count} 回獲得、平均 {avg} 回で入手",
+    "filter": {
+        "only5": "★5のみ",
+        "loadMore": "さらに読み込む"
+    },
+    "navbar": {
+        "title": "My-starRail",
+        "logoAlt": "アプリケーションロゴ",
+        "menuButton": "ナビゲーションメニューを開く",
+        "language": "言語",
+        "settings": "設定"
+    },
+    "settings": {
+        "title": "設定",
+        "save": "保存",
+        "cancel": "キャンセル",
+        "theme": "テーマ",
+        "themeDesc": "アプリの外観テーマを選択",
+        "system": "システムに従う",
+        "light": "ライトテーマ",
+        "dark": "ダークテーマ",
+        "notifications": "通知",
+        "notificationsDesc": "システム通知の有効化または無効化",
+        "volume": "音量",
+        "volumeDesc": "アプリの通知音の音量を調整",
+        "language": "言語",
+        "languageDesc": "インターフェースの表示言語を選択"
+    }
+}

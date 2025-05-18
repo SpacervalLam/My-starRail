@@ -14,12 +14,15 @@
 1. 等待程序启动，选择或输入待查询的 UID，点击 `开始分析` 按钮，
 2. 等待分析完成，点击抽卡记录列表中的任意一项，查看详细信息
 
+ps: 忘了处理端口冲突了，打开前看看有没有其他程序占用了 3168 端口。
+pps: 3168 是我QQ号前四位
+
 ## 🖼️ 截图
 
 
-![主界面](docs/screenshot1.png)
+![Settings](docs/screenshot1.png)
 
-![抽卡记录详情](docs/screenshot2.png)
+![Main UI](docs/screenshot2.gif)
 
 
 ## ✨ 功能特点
@@ -43,6 +46,8 @@
 ## 🌐 语言
 
 - 中文（默认）
+- English
+- 日本語
 
 ## 🧩 开发与构建
 

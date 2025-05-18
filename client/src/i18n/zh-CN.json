@@ -1,0 +1,56 @@
+{
+  "controls": {
+    "uidLabel": "UID",
+    "urlLabel": "URL",
+    "uidPlaceholder": "选择或输入 UID",
+    "urlPlaceholder": "输入抽卡记录 URL",
+    "analyze": "开始分析",
+    "analyzing": "分析中...",
+    "loading": "加载中…",
+    "noData": "未找到记录，请确认后再试",
+    "inputModeTip": "请输入 UID 后点击分析\n点击 UID/URL 切换模式"
+  },
+  "summary": {
+    "totalPulls": "总抽卡次数",
+    "fiveStar": "五星总数",
+    "currentPity": "当前最大保底"
+  },
+  "pools": {
+    "11": "角色活动跃迁",
+    "12": "光锥活动跃迁",
+    "1": "常驻跃迁",
+    "2": "新手跃迁"
+  },
+  "overview": "总抽卡：{total} 次\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0五星：{fiveStar} 次\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0平均出货间隔：{avg} 抽",
+  "expand": {
+    "expandRecords": "展开详细抽卡记录（{count} 条）"
+  },
+  "records": "获得 {count} 次\u00A0\u00A0\u00A0平均 {avg} 抽",
+  "filter": {
+    "only5": "仅显示五星",
+    "loadMore": "加载更多"
+  },
+  "navbar": {
+    "title": "My-starRail",
+    "logoAlt": "logo",
+    "menuButton": "打开导航菜单",
+    "language": "语言",
+    "settings": "设置"
+  },
+  "settings": {
+    "title": "设置",
+    "save": "保存",
+    "cancel": "取消",
+    "theme": "主题",
+    "themeDesc": "选择应用的外观主题",
+    "system": "跟随系统",
+    "light": "浅色主题",
+    "dark": "深色主题",
+    "notifications": "通知",
+    "notificationsDesc": "启用或禁用系统通知",
+    "volume": "音量",
+    "volumeDesc": "调整应用提示音音量",
+    "language": "语言",
+    "languageDesc": "选择界面显示语言"
+  }
+}
