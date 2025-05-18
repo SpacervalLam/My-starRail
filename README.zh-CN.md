@@ -48,7 +48,7 @@
 
 ```bash
 npm install
-npm run dev           # 启动开发环境
+npm run start:dev     # 启动开发环境
 
 npm run dist:win      # 在 Windows 上构建安装包
 npm run dist:mac      # 在 macOS 上构建安装包

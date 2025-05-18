@@ -49,7 +49,7 @@ Download from [Releases](https://github.com/SpacervalLam/StarRail-toolkit/releas
 
 ```bash
 npm install
-npm run dev           # start dev server
+npm run start:dev     # start dev server
 
 npm run dist:win      # build for windows
 npm run dist:mac      # build for mac
