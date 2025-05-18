@@ -99,7 +99,7 @@
             <div class="five-star-grid">
               <div v-for="item in entry.analysis.fiveStarDetails" :key="item.name" class="five-star-card"
                 :class="{ highlight: isNewestFiveStar(item, entry) }">
-                <img class="avatar" :src="`/assets/avatars/${item.item_id}.png`" :alt="item.name" />
+                <img class="avatar" :src="`assets/avatars/${item.item_id}.png`" :alt="item.name" />
                 <div class="detail">
                   <div class="name">{{ item.name }}</div>
                   <div class="stats">
