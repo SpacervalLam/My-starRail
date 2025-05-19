@@ -19,6 +19,9 @@
     "dev:electron": "electron ."
   },
   "dependencies": {
+    "@fortawesome/fontawesome-svg-core": "^6.7.2",
+    "@fortawesome/free-solid-svg-icons": "^6.7.2",
+    "@fortawesome/vue-fontawesome": "^3.0.8",
     "@nestjs/axios": "^4.0.0",
     "@nestjs/common": "^10.0.0",
     "@nestjs/core": "^10.0.0",
@@ -35,7 +38,8 @@
     "typeorm": "^0.3.24",
     "vue": "^3.2.0",
     "vue-chart-3": "^3.1.8",
-    "vue-i18n": "^9.14.4"
+    "vue-i18n": "^9.14.4",
+    "vue-router": "^4.5.1"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",

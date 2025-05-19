@@ -1,14 +1,14 @@
 <template>
-  <NavBar />
-  <router-view />
-  <div class="gacha-analyzer">
-    <!-- 游戏类型选择 -->
-    <div class="input-group">
-      <span>{{ t('controls.gameType') }}</span>
-      <select v-model="gameType">
-        <option value="starrail">{{ t('gameTypes.starrail') }}</option>
-        <option value="zenless">{{ t('gameTypes.zenless') }}</option>
-      </select>
+  <div class="gacha-analyzer"> <!-- 游戏类型选择器 -->
+    <div class="game-type-selector">
+      <div class="type-card" :class="{ active: gameType === GameType.StarRail }" @click="gameType = GameType.StarRail">
+        <img src="/assets/icon/star-rail-icon.png" alt="Star Rail">
+        <span>{{ t('gameTypes.starrail') }}</span>
+      </div>
+      <div class="type-card" :class="{ active: gameType === GameType.Zenless }" @click="gameType = GameType.Zenless">
+        <img src="/assets/icon/zenless-icon.png" alt="Zenless">
+        <span>{{ t('gameTypes.zenless') }}</span>
+      </div>
     </div>
 
     <!-- 控制区：UID/URL 切换与输入 -->
@@ -19,7 +19,8 @@
           <label class="input-group">
             <span @click="queryMode = QueryMode.URL">{{ t('controls.uidLabel') }}</span>
             <input list="uidList" v-model="uid" :placeholder="t('controls.uidPlaceholder')" maxlength="9"
-              @input="onUidInput" @change="handleDatalistSelect" @keydown.enter="handleEnterKey" @click.stop :disabled="loading" />
+              @input="onUidInput" @change="handleDatalistSelect" @keydown.enter="handleEnterKey" @click.stop
+              :disabled="loading" />
           </label>
           <datalist id="uidList">
             <option v-for="stored in storedUids" :key="stored" :value="stored" />
@@ -29,29 +30,28 @@
         <div class="card-face card-back">
           <label class="input-group">
             <span @click="queryMode = QueryMode.UID">{{ t('controls.urlLabel') }}</span>
-            <input v-model="gachaUrl" :placeholder="t('controls.urlPlaceholder')" 
-              @keydown.enter="handleEnterKey" @click.stop :disabled="loading" />
+            <input v-model="gachaUrl" :placeholder="t('controls.urlPlaceholder')" @keydown.enter="handleEnterKey"
+              @click.stop :disabled="loading" />
           </label>
         </div>
       </div>
       <!-- 分析按钮 -->
       <button class="btn analyze-btn" :disabled="loading || (queryMode === 'uid' ? !canAnalyze : !gachaUrl)"
         @click="runAnalysis">
-        <template v-if="loading">
-          <i class="icon-loading"></i> {{ t('controls.analyzing') }}
-        </template>
-        <template v-else>
-          <i class="icon-play"></i> {{ t('controls.analyze') }}
-        </template>
+    <template v-if="loading">
+      <i class="icon-loading"></i> {{ t('controls.analyzing') }}
+    </template>
+    <template v-else>
+      <i class="icon-play"></i> {{ t('controls.analyze') }}
+    </template>
       </button>
     </div>
 
     <!-- 全局 Loading 显示 -->
-    <div v-if="loading" class="loading">
-      <i class="icon-spinner"></i> {{ t('controls.loading') }}
+    <div v-if="loading" class="loading-container">
+      <img src="/assets/gif/loading.gif" alt="Loading" class="loading-gif">
+      <span class="loading-text">{{ t('controls.loading') }}</span>
     </div>
-
-    <div v-if="loading" class="loading"><img src="/assets/gif/loading.gif" alt="Loading..." /></div>
 
 
     <div v-else>
@@ -65,10 +65,10 @@
           <h3>⭐ {{ t('summary.fiveStar') }}</h3>
           <div class="value">{{ totalFiveStar }}</div>
         </div>
-        <div class="card summary-item">
+        <!-- <div class="card summary-item">
           <h3>🔋 {{ t('summary.currentPity') }}</h3>
           <div class="value">{{ maxCurrentPity }}</div>
-        </div>
+        </div> -->
       </div>
 
       <!-- 卡池标签页 -->
@@ -168,7 +168,6 @@ import {
   fetchAllUids,
   refreshGachaLogsFromUrl,
 } from '../api/gacha';
-import NavBar from '@/components/NavBar.vue';
 import {
   analyzeGachaLogs,
   GachaLogItem,
@@ -206,8 +205,8 @@ const showCount = ref(50);
 const expanded = ref(false);
 const show5StarOnly = ref(false);
 
-const poolOrder = computed<string[]>(() => gameType.value === GameType.StarRail 
-  ? ['11', '12', '1', '2'] 
+const poolOrder = computed<string[]>(() => gameType.value === GameType.StarRail
+  ? ['11', '12', '1', '2']
   : ['2002', '3002', '1001', '5001']);
 
 const entries = computed<PoolEntry[]>(() =>
@@ -266,7 +265,7 @@ async function runAnalysis() {
   const currentGameType = gameType.value;
   if (queryMode.value === 'uid') {
     const isStarRail = currentGameType === GameType.StarRail;
-    const isValid = isStarRail 
+    const isValid = isStarRail
       ? /^[1-9]\d{8}$/.test(uid.value)
       : /^[1-9]\d{7}$/.test(uid.value);
     if (!isValid) {
@@ -294,7 +293,7 @@ async function runAnalysis() {
     );
   } catch (e: any) {
     let errorMsg = e.message;
-    const retcodeMatch = e.message.match(/retcode=(-?\d+)/); 
+    const retcodeMatch = e.message.match(/retcode=(-?\d+)/);
     if (retcodeMatch) {
       const retcode = parseInt(retcodeMatch[1]);
       switch (retcode) {
@@ -375,8 +374,61 @@ const isNewestFiveStar = (
   padding: 0 1rem;
   font-family: 'Helvetica Neue', Arial, sans-serif;
   color: var(--text);
-  padding-top: 50px;
 }
+
+.game-type-selector {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin: 1rem 0 2rem;
+}
+
+.type-card {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  flex-direction: row; /* 横向排列图标和文字 */
+  width: auto; /* 根据内容自动宽度 */
+  height: auto;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  font-size: 14px;
+}
+
+.type-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.type-card img {
+  width: 20px;
+  height: 20px;
+}
+
+.type-card span {
+  font-weight: 500;
+  font-size: 13px;
+  color: #000;
+}
+
+.type-card.active {
+  background: #1f2937;
+}
+
+.type-card.active span {
+  color: #fff;
+}
+
+
+.type-card.active span {
+  color: #fff;
+}
+
 
 .control-cards-container {
   perspective: 1000px;
@@ -389,9 +441,10 @@ const isNewestFiveStar = (
   position: relative;
   width: 220px;
   height: 60px;
-  margin-bottom: 3rem;
+  margin: 0 auto 3rem;
   transition: transform 0.6s;
   transform-style: preserve-3d;
+  transform-origin: center;
 }
 
 .control-card.active {
@@ -409,10 +462,13 @@ const isNewestFiveStar = (
   backface-visibility: hidden;
   display: flex;
   align-items: center;
+  justify-content: center;
   padding: 0 1rem;
   background: #fff;
   border-radius: 8px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  left: 0;
+  right: 0;
 }
 
 .card-back {
@@ -468,10 +524,33 @@ const isNewestFiveStar = (
   background: linear-gradient(90deg, #3b40a4, #7d82e8);
 }
 
-.loading {
-  text-align: center;
-  font-style: italic;
-  color: var(--secondary);
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin: 20px 0;
+}
+
+.loading-gif {
+  width: 80px;
+  height: 80px;
+}
+
+.loading-text {
+  animation: bounce 0.8s infinite alternate;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
 }
 
 .summary-cards {
@@ -545,16 +624,27 @@ const isNewestFiveStar = (
 .five-star-card {
   display: flex;
   gap: 1rem;
-  padding: 1rem;
+  padding: 1.5rem;
   width: 100%;
   background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08),
+              0 2px 6px rgba(0, 0, 0, 0.05);
   position: relative;
+  border: 1px solid rgba(0, 0, 0, 0.03);
+  transition: all 0.3s ease;
+}
+
+.five-star-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12),
+              0 3px 8px rgba(0, 0, 0, 0.08);
 }
 
 .five-star-card.highlight {
   border: 2px solid var(--rank-5);
+  box-shadow: 0 4px 20px rgba(75, 85, 99, 0.15),
+              0 2px 6px rgba(75, 85, 99, 0.1);
 }
 
 .avatar {
