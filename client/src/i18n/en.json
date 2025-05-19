@@ -8,18 +8,31 @@
     "analyzing": "Analyzing...",
     "loading": "Loading…",
     "noData": "No records found, please check and retry",
-    "inputModeTip": "Enter UID then click Analyze\nClick UID/URL to switch mode"
+    "inputModeTip": "Enter UID then click Analyze\nClick UID/URL to switch mode",
+    "gameType": "Game Type"
+  },
+  "gameTypes": {
+    "starrail": "Honkai: Star Rail",
+    "zenless": "Zenless Zone Zero"
   },
   "summary": {
     "totalPulls": "Total Pulls",
     "fiveStar": "5★ Count",
     "currentPity": "Current Max Pity"
   },
-  "pools": {
-    "11": "Character Warp",
-    "12": "Light Cone Warp",
-    "1": "Standard Warp",
-    "2": "Beginner Warp"
+  "gamePools": {
+    "starrail": {
+      "11": "Character Warp",
+      "12": "Light Cone Warp",
+      "1": "Standard Warp",
+      "2": "Beginner Warp"
+    },
+    "zenless": {
+      "2002": "Limited-Time Channels",
+      "3002": "W-Engine Channels",
+      "1001": "Common Channels",
+      "5001": "Bangboo Channels"
+    }
   },
   "overview": "Total: {total}\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0 5★: {fiveStar}\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0Avg Pity: {avg}",
   "expand": {

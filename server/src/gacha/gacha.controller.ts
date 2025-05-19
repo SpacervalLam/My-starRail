@@ -35,13 +35,13 @@ export class GachaController {
    * @returns 
    */
   @Post('refresh')
-  async refreshLogs(@Body() body: { uid: string }): Promise<{ success: boolean }> {
-    const { uid } = body;
+  async refreshLogs(@Body() body: { uid: string; gameType?: 'starrail' | 'zenless' }): Promise<{ success: boolean }> {
+    const { uid, gameType = 'starrail' } = body;
     if (!uid) {
       throw new BadRequestException('uid 为必填项');
     }
     try {
-      await this.gachaService.fetchAndStoreLogs(uid);
+    await this.gachaService.fetchAndStoreLogs(uid, gameType);
       console.log(`刷新 ${uid} 的抽卡记录成功`);
       return { success: true };
     } catch (err: any) {
@@ -57,13 +57,13 @@ export class GachaController {
    * @returns 
    */
   @Post('refresh/url')
-  async refreshLogsByUrl(@Body() body: { url: string }): Promise<{ success: boolean; uid?: string; message?: string }> {
-    const { url } = body;
+  async refreshLogsByUrl(@Body() body: { url: string; gameType?: 'starrail' | 'zenless' }): Promise<{ success: boolean; uid?: string; message?: string }> {
+    const { url, gameType = 'starrail' } = body;
     if (!url) {
       return { success: false, message: 'url 为必填项' };
     }
     try {
-      const uid = await this.gachaService.fetchAndStoreLogsByUrl(url);
+      const uid = await this.gachaService.fetchAndStoreLogsByUrl(url, gameType);
       console.log(`通过URL刷新抽卡记录成功，UID: ${uid}`);
       return { success: true, uid };
     } catch (err: any) {

@@ -5,9 +5,9 @@ const API = axios.create({
   baseURL: 'http://localhost:3168/api/',
 });
 
-export async function refreshGachaLogs(uid: string): Promise<void> {
-  console.log('发送请求：gacha/refresh', uid);
-  await API.post('gacha/refresh', { uid });
+export async function refreshGachaLogs(uid: string, gameType: 'starrail' | 'zenless' = 'starrail'): Promise<void> {
+  console.log('发送请求：gacha/refresh', uid, gameType);
+  await API.post('gacha/refresh', { uid, gameType });
 }
 
 export async function fetchGachaLogs(uid: string, pool?: string): Promise<Record<string, any[]>> {
@@ -26,9 +26,9 @@ export async function fetchGachaLogs(uid: string, pool?: string): Promise<Record
   return groupedLogs;
 }
 
-export async function refreshGachaLogsFromUrl(url: string): Promise<string> {
-  console.log('发送请求：gacha/refresh/url', url);
-  const res = await API.post('gacha/refresh/url', { url });
+export async function refreshGachaLogsFromUrl(url: string, gameType: 'starrail' | 'zenless' = 'starrail'): Promise<string> {
+  console.log('发送请求：gacha/refresh/url', url, gameType);
+  const res = await API.post('gacha/refresh/url', { url, gameType });
   if (!res.data.success) {
     throw new Error(res.data.message || res.data.error || '你不是在乱填吧？');
   }

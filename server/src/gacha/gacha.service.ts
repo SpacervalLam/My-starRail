@@ -30,22 +30,31 @@ export class GachaService {
   /**
    * 从 Player.log 中用正则匹配出实际游戏安装目录
    */
-  private getGameInstallPath(): string | null {
+  private getGameInstallPath(gameType: 'starrail' | 'zenless' = 'starrail'): string | null {
+    console.log(`从 Player.log 中查找 ${gameType} 安装目录`);
     const root = this.getLocalLowRoot();
     if (!root) return null;
 
     const vendors = ['miHoYo', 'Cognosphere'];
+    const gamePatterns = {
+      starrail: /StarRail|崩坏：星穹铁道/i,
+      zenless: /ZenlessZoneZero|绝区零/i
+    };
+    console.log(gamePatterns[gameType]);
     for (const vendor of vendors) {
       const vendorDir = path.join(root, vendor);
       if (!fs.existsSync(vendorDir)) continue;
 
       for (const sub of fs.readdirSync(vendorDir)) {
-        if (!/StarRail|崩坏：星穹铁道/i.test(sub)) continue;
+        if (!gamePatterns[gameType].test(sub)) continue;
         const logFile = path.join(vendorDir, sub, 'Player.log');
         if (!fs.existsSync(logFile)) continue;
 
         const content = fs.readFileSync(logFile, 'utf-8');
-        const regex = /Loading player data from\s+([A-Za-z]:[\\/][^\r\n]+?StarRail_Data)[\\/]/i;
+        const regex = gameType === 'starrail'
+          ? /Loading player data from\s+([A-Za-z]:[\\/][^\r\n]+?StarRail_Data)[\\/]/i
+          : /Discovering subsystems at path\s+([A-Za-z]:[\\/](?:[^\\/:"*?<>|]+[\\/])*ZenlessZoneZero_Data)(?:[\\/][^\\/\r\n]*)?/i;
+
         const match = content.match(regex);
         if (match && match[1]) {
           console.log(`找到游戏安装路径: ${match[1]}`);
@@ -61,31 +70,70 @@ export class GachaService {
   private sanitizeUrl(rawUrl: string): string {
     try {
       const urlObj = new URL(rawUrl);
-      const keepKeys = [
-        'authkey_ver',
-        'sign_type',
-        'auth_appid',
-        'lang',
-        'authkey',
-        'game_biz',
-        'size'
-      ];
+      const gameBiz = urlObj.searchParams.get('game_biz');
+      console.log(`game_biz: ${gameBiz}`);
+
+      if (!gameBiz) {
+        throw new Error('Missing game_biz parameter');
+      }
+
+      // 每个游戏保留的参数列表
+      const keepParamsMap: Record<string, string[]> = {
+        'hk4e_cn': [ // 原神
+          'authkey_ver',
+          'sign_type',
+          'auth_appid',
+          'lang',
+          'authkey',
+          'game_biz',
+          'size'
+        ],
+        'hkrpg_cn': [ // 星穹铁道
+          'authkey_ver',
+          'sign_type',
+          'auth_appid',
+          'lang',
+          'authkey',
+          'game_biz',
+          'size'
+        ],
+        'nap_cn': [ // 绝区零
+          'authkey_ver',
+          'sign_type',
+          'auth_appid',
+          'lang',
+          'authkey',
+          'game_biz',
+          'size'
+        ]
+      };
+
+      const keepKeys = keepParamsMap[gameBiz];
+      if (!keepKeys) {
+        throw new Error(`Unsupported game_biz: ${gameBiz}`);
+      }
+
       const base = urlObj.origin + urlObj.pathname;
       const params = new URLSearchParams();
+
       for (const key of keepKeys) {
-        const v = urlObj.searchParams.get(key);
-        if (v) params.set(key, v);
+        const value = urlObj.searchParams.get(key);
+        if (value !== null) {
+          params.set(key, value);
+        }
       }
+
       return `${base}?${params.toString()}`;
     } catch (err) {
-      console.error(`Invalid URL format: ${rawUrl}`);
-      throw new BadRequestException('Invalid URL format');
+      console.error(`Invalid URL format: ${rawUrl}`, err);
+      throw new BadRequestException('Invalid URL format or unsupported game_biz');
     }
   }
 
   /** 从缓存文件 data_2 提取 URL */
-  private getUrlFromCache(): string | null {
-    const installPath = this.getGameInstallPath();
+  private getUrlFromCache(gameType: 'starrail' | 'zenless' = 'starrail'): string | null {
+    console.log(`从缓存文件 data_2 中提取 URL`);
+    const installPath = this.getGameInstallPath(gameType);
     if (!installPath) return null;
     const wc = path.join(installPath, 'webCaches');
     if (!fs.existsSync(wc)) return null;
@@ -107,30 +155,47 @@ export class GachaService {
   }
 
   /** 回退：从 Player.log 中用正则匹配 URL */
-  private getUrlFromLog(): string | null {
+  private getUrlFromLog(
+    gameType: 'starrail' | 'zenless' = 'starrail'
+  ): string | null {
+    console.log(`回退，从从 Player.log 中匹配 URL`);
     const root = this.getLocalLowRoot();
     if (!root) return null;
     const vendors = ['miHoYo', 'Cognosphere'];
+    const gamePatterns = {
+      starrail: /StarRail|崩坏：星穹铁道/i,
+      zenless: /ZenlessZoneZero|绝区零/i,
+    };
+
+    const zenlessUrlRegex =
+      /https?:\/\/[^\s\r\n]+getGachaLog[^\s\r\n]+auth_appid=webview_gacha[^\s\r\n]+/gi;
+
+    const starrailUrlRegex =
+      /https?:\/\/[^\s\r\n]+getGachaLog[^\s\r\n]+auth_appid=webview_gacha[^\s\r\n]+/gi;
+
     for (const vendor of vendors) {
       const vendorDir = path.join(root, vendor);
       if (!fs.existsSync(vendorDir)) continue;
       for (const sub of fs.readdirSync(vendorDir)) {
-        if (!/StarRail|崩坏：星穹铁道/i.test(sub)) continue;
+        if (!gamePatterns[gameType].test(sub)) continue;
         const logFile = path.join(vendorDir, sub, 'Player.log');
         if (!fs.existsSync(logFile)) continue;
         const txt = fs.readFileSync(logFile, 'utf-8');
-        const match = txt.match(
-          /https?:\/\/[^\s\r\n]+getGachaLog[^\s\r\n]+auth_appid=webview_gacha[^\s\r\n]+/,
-        );
-        if (match) return match[0];
+
+        const regex = gameType === 'zenless' ? zenlessUrlRegex : starrailUrlRegex;
+        let match: RegExpExecArray | null;
+        while ((match = regex.exec(txt))) {
+          // 找到 URL
+          return match[1];
+        }
       }
     }
     return null;
   }
 
   /** 获取并 sanitize 基础 URL */
-  public getGachaUrl(url?: string): string {
-    const raw = url || this.getUrlFromCache() || this.getUrlFromLog();
+  private getGachaUrl(url?: string, gameType: 'starrail' | 'zenless' = 'starrail'): string {
+    const raw = url || this.getUrlFromCache(gameType) || this.getUrlFromLog(gameType);
     if (!raw) {
       throw new BadRequestException('无法提取抽卡记录 URL');
     }
@@ -160,7 +225,9 @@ export class GachaService {
     urlObj.searchParams.set('gacha_type', poolKey);
     urlObj.searchParams.set('page', String(page));
     urlObj.searchParams.set('size', String(size));
-    urlObj.searchParams.set('end_id', endId);
+    if (endId) {
+      urlObj.searchParams.set('end_id', endId);
+    }
     const url = urlObj.toString();
     try {
       const resp = await firstValueFrom(this.httpService.get(url));
@@ -225,15 +292,20 @@ export class GachaService {
   /**
      * 根据 URL 从网络抓取指定记录、存库去重
      */
-  public async fetchAndStoreLogsByUrl(url: string): Promise<string> {
+  public async fetchAndStoreLogsByUrl(url: string, gameType: 'starrail' | 'zenless' = 'starrail'): Promise<string> {
     let base: string;
     try {
-      base = this.getGachaUrl(url);
+      base = this.getGachaUrl(url, gameType);
     } catch (err) {
       throw new BadRequestException('你不是在乱填吧？');
     }
 
-    const pools = [
+    const pools = gameType === 'zenless' ? [
+      { key: '2002', name: '独家频段' },
+      { key: '3002', name: '音擎频段' },
+      { key: '1001', name: '常驻频段' },
+      { key: '5001', name: '邦布频段' }
+    ] : [
       { key: '11', name: '角色活动跃迁' },
       { key: '12', name: '光锥活动跃迁' },
       { key: '1', name: '常驻跃迁' },
@@ -260,8 +332,20 @@ export class GachaService {
         }
 
         // 安全提取 list
-        const list: GachaLog[] = fetchResult.list || [];
+        let list: GachaLog[] = fetchResult.list || [];
         if (list.length === 0) break;
+
+        // For zenless, map rank_type from 2,3,4 to 3,4,5
+        if (gameType === 'zenless') {
+          list = list.map(item => {
+            const rankMap: Record<string, string> = { '2': '3', '3': '4', '4': '5' };
+            const rankType = String(item.rank_type);
+            return {
+              ...item,
+              rank_type: rankMap[rankType] || rankType
+            };
+          });
+        }
 
         // 从首条记录中提取 uid
         const fetchedUid = list[0].uid;
@@ -330,9 +414,14 @@ export class GachaService {
   /**
    * 根据 UID 从网络抓取所有记录、存库去重
    */
-  public async fetchAndStoreLogs(uid: string): Promise<void> {
-    const base = this.getGachaUrl();
-    const pools = [
+  public async fetchAndStoreLogs(uid: string, gameType: 'starrail' | 'zenless' = 'starrail'): Promise<void> {
+    const base = this.getGachaUrl(undefined, gameType);
+    const pools = gameType === 'zenless' ? [
+      { key: '2002', name: '独家频段' },
+      { key: '3002', name: '音擎频段' },
+      { key: '1001', name: '常驻频段' },
+      { key: '5001', name: '邦布频段' }
+    ] : [
       { key: '11', name: '角色活动跃迁' },
       { key: '12', name: '光锥活动跃迁' },
       { key: '1', name: '常驻跃迁' },
@@ -343,16 +432,29 @@ export class GachaService {
 
     for (const p of pools) {
       const maxTime = await this.getLatestTimestamp(uid, p.key);
+      console.log(`获取 ${p.name} 记录, 开始时间: ${maxTime || '无限制'}`);
       let page = 1;
       let endId = '0';
       let hasMore = true;
 
       while (hasMore) {
         const data = await this.fetchGachaPage(base, p.key, p.name, page, 20, endId);
-        const list = data.list ?? [];
+        let list = data.list ?? [];
         if (list.length === 0) {
           hasMore = false;
           break;
+        }
+
+        // For zenless, map rank_type from 2,3,4 to 3,4,5
+        if (gameType === 'zenless') {
+          list = list.map(item => {
+            const rankMap: Record<string, string> = { '2': '3', '3': '4', '4': '5' };
+            const rankType = String(item.rank_type);
+            return {
+              ...item,
+              rank_type: rankMap[rankType] || rankType
+            };
+          });
         }
 
         let newItems = [];

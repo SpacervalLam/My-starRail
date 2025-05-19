@@ -8,18 +8,31 @@
     "analyzing": "分析中...",
     "loading": "加载中…",
     "noData": "未找到记录，请确认后再试",
-    "inputModeTip": "请输入 UID 后点击分析\n点击 UID/URL 切换模式"
+    "inputModeTip": "请输入 UID 后点击分析\n点击 UID/URL 切换模式",
+    "gameType": "游戏类型"
+  },
+  "gameTypes": {
+    "starrail": "崩坏：星穹铁道",
+    "zenless": "绝区零"
   },
   "summary": {
     "totalPulls": "总抽卡次数",
     "fiveStar": "五星总数",
     "currentPity": "当前最大保底"
   },
-  "pools": {
-    "11": "角色活动跃迁",
-    "12": "光锥活动跃迁",
-    "1": "常驻跃迁",
-    "2": "新手跃迁"
+  "gamePools": {
+    "starrail": {
+      "11": "角色活动跃迁",
+      "12": "光锥活动跃迁",
+      "1": "常驻跃迁",
+      "2": "新手跃迁"
+    },
+    "zenless": {
+      "2002": "独家频段",
+      "3002": "音擎频段",
+      "1001": "常驻频段",
+      "5001": "邦布频段"
+    }
   },
   "overview": "总抽卡：{total} 次\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0五星：{fiveStar} 次\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0\u00A0平均出货间隔：{avg} 抽",
   "expand": {

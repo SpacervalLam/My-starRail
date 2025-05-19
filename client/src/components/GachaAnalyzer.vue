@@ -2,15 +2,24 @@
   <NavBar />
   <router-view />
   <div class="gacha-analyzer">
+    <!-- 游戏类型选择 -->
+    <div class="input-group">
+      <span>{{ t('controls.gameType') }}</span>
+      <select v-model="gameType">
+        <option value="starrail">{{ t('gameTypes.starrail') }}</option>
+        <option value="zenless">{{ t('gameTypes.zenless') }}</option>
+      </select>
+    </div>
+
     <!-- 控制区：UID/URL 切换与输入 -->
     <div class="control-cards-container">
       <div class="control-card" :class="{ active: queryMode === 'uid', flipped: queryMode === 'url' }">
         <!-- FRONT: UID 模式 -->
         <div class="card-face card-front">
           <label class="input-group">
-            <span @click="queryMode = 'url'">{{ t('controls.uidLabel') }}</span>
+            <span @click="queryMode = QueryMode.URL">{{ t('controls.uidLabel') }}</span>
             <input list="uidList" v-model="uid" :placeholder="t('controls.uidPlaceholder')" maxlength="9"
-              @input="onUidInput" @change="handleDatalistSelect" @click.stop :disabled="loading" />
+              @input="onUidInput" @change="handleDatalistSelect" @keydown.enter="handleEnterKey" @click.stop :disabled="loading" />
           </label>
           <datalist id="uidList">
             <option v-for="stored in storedUids" :key="stored" :value="stored" />
@@ -19,8 +28,9 @@
         <!-- BACK: URL 模式 -->
         <div class="card-face card-back">
           <label class="input-group">
-            <span @click="queryMode = 'uid'">{{ t('controls.urlLabel') }}</span>
-            <input v-model="gachaUrl" :placeholder="t('controls.urlPlaceholder')" @click.stop :disabled="loading" />
+            <span @click="queryMode = QueryMode.UID">{{ t('controls.urlLabel') }}</span>
+            <input v-model="gachaUrl" :placeholder="t('controls.urlPlaceholder')" 
+              @keydown.enter="handleEnterKey" @click.stop :disabled="loading" />
           </label>
         </div>
       </div>
@@ -65,14 +75,14 @@
       <div v-if="hasAnyLogs" class="pool-tabs">
         <button v-for="entry in entries" :key="entry.poolId"
           :class="['tab-btn', { active: activeTab === entry.poolId }]" @click="activeTab = entry.poolId">
-          {{ t(`pools.${entry.poolId}`) }}
+          {{ t(`gamePools.${gameType}.${entry.poolId}`) }}
         </button>
       </div>
 
       <!-- 卡池概览 -->
       <template v-for="entry in entries" :key="entry.poolId">
         <div v-if="activeTab === entry.poolId && entry.logs.length" class="pool-section card">
-          <h2>{{ t(`pools.${entry.poolId}`) }}</h2>
+          <h2>{{ t(`gamePools.${gameType}.${entry.poolId}`) }}</h2>
           <p class="overview">
             {{ t('overview', {
               total: entry.analysis.total,
@@ -172,9 +182,20 @@ const { t } = useI18n({
   inheritLocale: true
 })
 
+enum GameType {
+  StarRail = 'starrail',
+  Zenless = 'zenless'
+}
+
+enum QueryMode {
+  UID = 'uid',
+  URL = 'url'
+}
+
 const uid = ref('');
 const gachaUrl = ref('');
-const queryMode = ref<'uid' | 'url'>('uid');
+const queryMode = ref<QueryMode>(QueryMode.UID);
+const gameType = ref<GameType>(GameType.StarRail);
 const loading = ref(false);
 const groupedLogs = ref<Record<string, GachaLogItem[]>>({});
 const analysisResults = ref<Record<string, GachaAnalysis>>({});
@@ -185,19 +206,15 @@ const showCount = ref(50);
 const expanded = ref(false);
 const show5StarOnly = ref(false);
 
-const poolOrder = ['11', '12', '1', '2'];
-const poolNames: Record<string, string> = {
-  '11': '角色活动跃迁',
-  '12': '光锥活动跃迁',
-  '1': '常驻跃迁',
-  '2': '新手跃迁',
-};
+const poolOrder = computed<string[]>(() => gameType.value === GameType.StarRail 
+  ? ['11', '12', '1', '2'] 
+  : ['2002', '3002', '1001', '5001']);
 
-const entries = computed(() =>
-  poolOrder.map((poolId) => {
+const entries = computed<PoolEntry[]>(() =>
+  poolOrder.value.map((poolId: string) => {
     const logs = groupedLogs.value[poolId] || [];
     const analysis = analysisResults.value[poolId] || analyzeGachaLogs([]);
-    return { poolId, logs, analysis } as PoolEntry;
+    return { poolId, logs, analysis };
   })
 );
 
@@ -233,11 +250,28 @@ onMounted(async () => {
 
 function onUidInput() {
   uid.value = uid.value.replace(/\D/g, '');
+  const maxLength = gameType.value === GameType.Zenless ? 8 : 9;
+  if (uid.value.length > maxLength) {
+    uid.value = uid.value.slice(0, maxLength);
+  }
+}
+
+function handleEnterKey() {
+  if (canAnalyze.value) {
+    runAnalysis();
+  }
 }
 
 async function runAnalysis() {
-  if (queryMode.value === 'uid' && !/^[1-9]\d{8}$/.test(uid.value)) {
-    return alert('请输入有效的 UID（9 位数字，不以 0 开头）');
+  const currentGameType = gameType.value;
+  if (queryMode.value === 'uid') {
+    const isStarRail = currentGameType === GameType.StarRail;
+    const isValid = isStarRail 
+      ? /^[1-9]\d{8}$/.test(uid.value)
+      : /^[1-9]\d{7}$/.test(uid.value);
+    if (!isValid) {
+      return alert(`请输入有效的 UID（${isStarRail ? '9' : '8'} 位数字，不以 0 开头）`);
+    }
   }
   if (queryMode.value === 'url' && !gachaUrl.value) {
     return alert('请输入抽卡记录 URL');
@@ -245,22 +279,22 @@ async function runAnalysis() {
   loading.value = true;
   try {
     let data: Record<string, GachaLogItem[]> = {};
-    if (queryMode.value === 'uid') {
-      console.log('发送请求：gacha/logs', uid.value);
-      await refreshGachaLogs(uid.value);
+    if (queryMode.value === QueryMode.UID) {
+      console.log(`发送请求：gacha/logs ${currentGameType}`, uid.value);
+      await refreshGachaLogs(uid.value, currentGameType);
       data = await fetchGachaLogs(uid.value);
-    } else {
-      console.log('发送请求：gacha/refresh/url', gachaUrl.value);
-      const uidFromUrl = await refreshGachaLogsFromUrl(gachaUrl.value);
+    } else if (queryMode.value === QueryMode.URL) {
+      console.log(`发送请求：gacha/refresh/url ${currentGameType}`, gachaUrl.value);
+      const uidFromUrl = await refreshGachaLogsFromUrl(gachaUrl.value, currentGameType);
       data = await fetchGachaLogs(uidFromUrl);
     }
     groupedLogs.value = data;
     analysisResults.value = Object.fromEntries(
-      poolOrder.map((poolId) => [poolId, analyzeGachaLogs(data[poolId] || [])])
+      poolOrder.value.map((poolId: string) => [poolId, analyzeGachaLogs(data[poolId] || [])])
     );
   } catch (e: any) {
     let errorMsg = e.message;
-    const retcodeMatch = e.message.match(/retcode=(-?\d+)/);
+    const retcodeMatch = e.message.match(/retcode=(-?\d+)/); 
     if (retcodeMatch) {
       const retcode = parseInt(retcodeMatch[1]);
       switch (retcode) {
@@ -310,7 +344,9 @@ const formatTime = (t: string) => format(new Date(t), 'yyyy-MM-dd HH:mm');
 
 const canAnalyze = computed(() =>
   (queryMode.value === 'uid'
-    ? /^[1-9]\d{8}$/.test(uid.value)
+    ? gameType.value === 'zenless'
+      ? /^[1-9]\d{7}$/.test(uid.value)
+      : /^[1-9]\d{8}$/.test(uid.value)
     : !!gachaUrl.value) &&
   !loading.value &&
   !loadingUids.value
