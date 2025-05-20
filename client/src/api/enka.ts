@@ -1,5 +1,9 @@
 import axios from 'axios';
 
+interface CustomError extends Error {
+  code?: number | string;
+}
+
 const API = axios.create({
   baseURL: 'http://localhost:3168/api/',
 });
@@ -61,12 +65,39 @@ export interface FCVaData {
 }
 
 export async function fetchGenshinData(uid: string): Promise<GenshinData> {
-  console.log('发送请求：enka/genshin', uid);
-  const res = await API.post('enka/genshin', { uid });
-  if (!res.data.success) {
-    throw new Error(res.data.message || '获取Genshin数据失败');
+  try {
+    // 先刷新数据
+    const refreshRes = await API.post('genshin/refresh', { uid });
+    if (!refreshRes.data.success) {
+      throw new Error(refreshRes.data.message || '刷新数据失败') as CustomError;
+    }
+
+    // 再获取数据
+    const res = await API.get('genshin/data', { params: { uid } });
+    if (!res.data) {
+      throw new Error('获取Genshin数据失败') as CustomError;
+    }
+    return res.data;
+  } catch (err) {
+    if (axios.isAxiosError(err)) {
+      const error = new Error(getErrorMessage(err.response?.status || 500)) as CustomError;
+      error.code = err.response?.status || 500;
+      throw error;
+    }
+    throw err;
   }
-  return res.data.data;
+}
+
+function getErrorMessage(code: number): string {
+  const messages: Record<number, string> = {
+    400: 'UID是不是填错了？？',
+    404: '玩家不存在（米哈游说的）或未公开信息',
+    424: '游戏维护中/更新后服务不可用', 
+    429: '别一直点',
+    500: '服务器内部错误',
+    503: '服务暂时不可用'
+  };
+  return messages[code] || '获取数据失败';
 }
 
 export async function fetchFCVaData(uid: string): Promise<FCVaData> {
@@ -77,3 +108,18 @@ export async function fetchFCVaData(uid: string): Promise<FCVaData> {
   }
   return res.data.data;
 }
+
+export async function fetchAllUids(): Promise<string[]> {
+  try {
+    const res = await API.get('genshin/uids');
+    return res.data || [];
+  } catch (err) {
+    if (axios.isAxiosError(err)) {
+      const error = new Error(getErrorMessage(err.response?.status || 500)) as CustomError;
+      error.code = err.response?.status || 500;
+      throw error;
+    }
+    throw err;
+  }
+}
+

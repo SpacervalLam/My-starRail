@@ -2,7 +2,6 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { GachaLog } from './gacha/entities/gacha-log.entity';
 
 export async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -16,7 +15,7 @@ export async function bootstrap() {
   // 全局管道：启用类验证
   app.useGlobalPipes(new ValidationPipe());
 
-  // 监听端口，优先读取环境变量 PORT，否则默认 3168
+  // 监听端口，默认 3168
   const port = process.env.PORT ?? 3168;
   app.setGlobalPrefix('api'); // 设置全局前缀
   await app.listen(port);
@@ -34,6 +33,19 @@ export async function bootstrap() {
       );
     `);
     console.log('gacha_log 表检查/创建完成');
+
+    await dataSource.query(`
+      CREATE TABLE IF NOT EXISTS genshin_data (
+        uid TEXT PRIMARY KEY,
+        player_info JSON NOT NULL,
+        avatar_info_list JSON NOT NULL,
+        ttl INTEGER NOT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    console.log('genshin_data 表检查/创建完成');
   } catch (err) {
     console.error('初始化数据库表失败：', err);
   }

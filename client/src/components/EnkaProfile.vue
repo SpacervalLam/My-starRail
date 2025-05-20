@@ -4,7 +4,18 @@
 
     <div class="input-group">
       <label for="uid-input">{{ t('controls.uidLabel') }}:</label>
-      <input id="uid-input" v-model="uid" type="text" :placeholder="t('enka.uidPlaceholder')" class="uid-input" />
+      <input 
+        id="uid-input" 
+        v-model="uid" 
+        type="text" 
+        :placeholder="t('enka.uidPlaceholder')" 
+        class="uid-input"
+        list="uid-list"
+      />
+      <datalist id="uid-list">
+        <option v-for="storedUid in storedUids" :key="storedUid" :value="storedUid" />
+      </datalist>
+      <span v-if="loadingUids" class="loading-text">{{ t('controls.loading') }}</span>
     </div>
 
     <div class="button-group">
@@ -59,9 +70,9 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed } from 'vue';
+import { defineComponent, ref, computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { fetchGenshinData, fetchFCVaData } from '../api/enka';
+import { fetchGenshinData, fetchFCVaData, fetchAllUids } from '../api/enka';
 import type { GenshinData, FCVaData, Equip } from '../api/enka';
 import AvatarModal from './avatarModal.vue';
 import characters from '../dict/characters.json';
@@ -99,6 +110,8 @@ export default defineComponent({
     const data = ref<GenshinData | FCVaData | null>(null);
     const showModal = ref(false);
     const currentCharacter = ref<any>(null);
+    const storedUids = ref<string[]>([]);
+    const loadingUids = ref(false);
 
     const validateUid = (uid: string) => {
       return /^\d{9}$/.test(uid);
@@ -121,7 +134,6 @@ export default defineComponent({
       '389026': t('equip.artifact_circlet_01')
     };
 
-    // 统一装备名称获取函数
     const getEquipName = (equipOrHash: Equip | string) => {
       if (typeof equipOrHash === 'string') {
         return equipNameMap[equipOrHash] || getLocalizedText(equipOrHash);
@@ -129,7 +141,6 @@ export default defineComponent({
       return getLocalizedText(equipOrHash.flat.nameTextMapHash);
     };
 
-    // 获取装备套装名称
     const getEquipSetName = (equip: Equip) => {
       if (!equip.flat.setNameTextMapHash) return '';
       return getLocalizedText(equip.flat.setNameTextMapHash);
@@ -183,11 +194,20 @@ export default defineComponent({
       try {
         data.value = await fetchFCVaData(uid.value);
       } catch (err) {
-        error.value = err instanceof Error ? err.message : t('enka.fetchFCVa') + t('controls.loading');
+        error.value = err instanceof Error ? err.message.replace(/\(\d+\)$/, '') : t('enka.fetchFCVa') + t('controls.loading');
       } finally {
         isLoading.value = false;
       }
     };
+
+    onMounted(async () => {
+      loadingUids.value = true;
+      try {
+        storedUids.value = await fetchAllUids();
+      } finally {
+        loadingUids.value = false;
+      }
+    });
 
     return {
       t,
@@ -197,6 +217,8 @@ export default defineComponent({
       data,
       showModal,
       currentCharacter,
+      storedUids,
+      loadingUids,
       getCharacterName,
       getPropName,
       getEquipName,

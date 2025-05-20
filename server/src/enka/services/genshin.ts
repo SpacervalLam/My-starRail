@@ -119,7 +119,11 @@ export async function fetchGenshinData(uid: string): Promise<EnkaData | null> {
         return response.data;
     } catch (error) {
         if (axios.isAxiosError(error)) {
-            console.error(`HTTP 错误: ${error.response?.status} ${error.message}`);
+            if (error.response?.status === 404) {
+                console.error(`UID ${uid} 不存在或未公开信息`);
+            } else {
+                console.error(`HTTP 错误: ${error.response?.status} - ${error.message}`);
+            }
         } else {
             console.error('请求失败:', error);
         }
