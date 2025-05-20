@@ -11,7 +11,6 @@ import { GenshinModule } from './enka/genshin.module';
 
 @Module({
   imports: [
-    // 全局数据库连接配置
     TypeOrmModule.forRoot({
       type: 'sqlite',
       database: path.join(app.getPath('userData'), 'gacha.sqlite'),
@@ -19,7 +18,6 @@ import { GenshinModule } from './enka/genshin.module';
       synchronize: false,
       retryAttempts: 5,
       retryDelay: 3000,
-      logging: true,
     }),
     GachaModule,
     GenshinModule,
@@ -28,7 +26,5 @@ import { GenshinModule } from './enka/genshin.module';
     HealthController,
     GenshinController,
   ],
-  providers: [],
 })
-
 export class AppModule { }

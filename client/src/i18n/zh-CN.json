@@ -13,7 +13,8 @@
   },
   "gameTypes": {
     "starrail": "崩坏：星穹铁道",
-    "zenless": "绝区零"
+    "zenless": "绝区零",
+    "genshin": "原神"
   },
   "summary": {
     "totalPulls": "总抽卡次数",

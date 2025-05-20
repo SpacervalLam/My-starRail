@@ -1,125 +1,83 @@
-import axios from 'axios';
+import axios, { AxiosInstance, AxiosError } from 'axios';
+import type { EnkaData } from '@/type/genshin';
 
-interface CustomError extends Error {
-  code?: number | string;
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
 }
 
-const API = axios.create({
-  baseURL: 'http://localhost:3168/api/',
-});
-
-interface Flat {
-  nameTextMapHash: string;
-  rankLevel: number;
-  itemType: string;
-  icon: string;
-  equipType?: string;
-  setId?: number;
-  setNameTextMapHash?: string;
-}
-
-interface Weapon {
-  level: number;
-  promoteLevel: number;
-  affixMap: Record<string, number>;
-}
-
-interface Reliquary {
-  level: number;
-  mainPropId: number;
-  appendPropIdList: number[];
-}
-
-export interface Equip {
-  itemId: number;
-  weapon?: Weapon;
-  reliquary?: Reliquary;
-  flat: Flat;
-}
-
-interface PlayerInfo {
-  nickname: string;
-  level: number;
-  signature: string;
-  worldLevel: number;
-  nameCardId?: number;
-  finishAchievementNum?: number;
-  towerFloorIndex?: number;
-  towerLevelIndex?: number;
-}
-
-interface AvatarInfo {
-  avatarId: number;
-  propMap: Record<string, { type: number; val: string }>;
-  fightPropMap: Record<string, number>;
-  equipList: Equip[];
-}
-
-export interface GenshinData {
-  playerInfo: PlayerInfo;
-  avatarInfoList: AvatarInfo[];
-}
-
-export interface FCVaData {
-  [key: string]: any;
-}
-
-export async function fetchGenshinData(uid: string): Promise<GenshinData> {
-  try {
-    // 先刷新数据
-    const refreshRes = await API.post('genshin/refresh', { uid });
-    if (!refreshRes.data.success) {
-      throw new Error(refreshRes.data.message || '刷新数据失败') as CustomError;
-    }
-
-    // 再获取数据
-    const res = await API.get('genshin/data', { params: { uid } });
-    if (!res.data) {
-      throw new Error('获取Genshin数据失败') as CustomError;
-    }
-    return res.data;
-  } catch (err) {
-    if (axios.isAxiosError(err)) {
-      const error = new Error(getErrorMessage(err.response?.status || 500)) as CustomError;
-      error.code = err.response?.status || 500;
-      throw error;
-    }
-    throw err;
+export class ApiError extends Error {
+  public code: number;
+  constructor(message: string, code: number) {
+    super(message);
+    this.code = code;
+    Object.setPrototypeOf(this, ApiError.prototype);
   }
 }
+
+const api: AxiosInstance = axios.create({
+  baseURL: 'http://localhost:3168/api/',
+  headers: { 'Content-Type': 'application/json' },
+  timeout: 100000
+});
 
 function getErrorMessage(code: number): string {
   const messages: Record<number, string> = {
-    400: 'UID是不是填错了？？',
-    404: '玩家不存在（米哈游说的）或未公开信息',
-    424: '游戏维护中/更新后服务不可用', 
-    429: '别一直点',
-    500: '服务器内部错误',
-    503: '服务暂时不可用'
+    400: 'UID 格式不正确。',
+    404: '玩家不存在或未公开信息。',
+    424: '游戏维护中或更新后服务暂不可用。',
+    429: '请求过于频繁，请稍后重试。',
+    500: '服务器内部错误，请联系管理员。',
+    503: '服务暂时不可用，请稍后再试。',
   };
-  return messages[code] || '获取数据失败';
+  return messages[code] ?? '超时';
+  ;
 }
 
-export async function fetchFCVaData(uid: string): Promise<FCVaData> {
-  console.log('发送请求：enka/genshin/fcva', uid);
-  const res = await API.post('enka/genshin/fcva', { uid });
-  if (!res.data.success) {
-    throw new Error(res.data.message || '获取zzz数据失败');
+// 从数据库读取缓存数据
+export async function getCachedData(uid: string): Promise<EnkaData> {
+  const res = await api.get<EnkaData>(`genshin/data`, { params: { uid } });
+  return res.data;
+}
+
+export async function fetchGenshinData(uid: string): Promise<EnkaData> {
+  try {
+    console.log(`Fetching data for ${uid}...`);
+    await api.post<ApiResponse<null>>('genshin/refresh', { uid });
+    const dataRes = await api.get<EnkaData>('genshin/data', { params: { uid } });
+    return dataRes.data;
+  } catch (e) {
+    if (axios.isAxiosError(e)) {
+      const code = e.response?.status ?? 0;
+      throw new ApiError(getErrorMessage(code), code);
+    }
+    throw e;
   }
-  return res.data.data;
 }
 
 export async function fetchAllUids(): Promise<string[]> {
   try {
-    const res = await API.get('genshin/uids');
-    return res.data || [];
-  } catch (err) {
-    if (axios.isAxiosError(err)) {
-      const error = new Error(getErrorMessage(err.response?.status || 500)) as CustomError;
-      error.code = err.response?.status || 500;
-      throw error;
+    const res = await api.get<ApiResponse<string[]>>('genshin/uids');
+    return res.data.data;
+  } catch (e) {
+    if (axios.isAxiosError(e)) {
+      const code = e.response?.status ?? 0;
+      throw new ApiError(getErrorMessage(code), code);
     }
-    throw err;
+    throw e;
   }
 }
 
+export async function fetchZZZData(uid: string): Promise<any> {
+  try {
+    const res = await api.post<ApiResponse<any>>('genshin/zzz', { uid });
+    return res.data.data;
+  } catch (e) {
+    if (axios.isAxiosError(e)) {
+      const code = e.response?.status ?? 0;
+      throw new ApiError(getErrorMessage(code), code);
+    }
+    throw e;
+  }
+}

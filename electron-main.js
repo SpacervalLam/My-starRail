@@ -65,7 +65,13 @@ app.whenReady().then(async () => {
     console.error('Initialization failed:', err);
     app.quit();
   }
+  // // 监听渲染进程的 console 输出
+  // win.webContents.on('console-message', (event, level, message) => {
+  //   console.log(`[渲染进程日志] 级别: ${level}, 内容: ${message}`);
+  // });
 });
+
+
 
 app.on('activate', () => !mainWindow && createWindow());
 app.on('window-all-closed', () => {

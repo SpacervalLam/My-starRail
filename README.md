@@ -332,3 +332,166 @@ My-starRail
 └─ vite.config.ts
 
 ```
+```
+My-starRail
+├─ .npmrc
+├─ CHANGELOG.md
+├─ client
+│  ├─ index.html
+│  ├─ package.json.bak
+│  ├─ public
+│  │  └─ assets
+│  │     ├─ avatars
+│  │     │  ├─ 1001.png
+│  │     │  ├─ 1002.png
+│  │     │  ├─ 1003.png
+│  │     │  ├─ 1004.png
+│  │     │  ├─ 1005.png
+│  │     │  ├─ 1006.png
+│  │     │  ├─ 1008.png
+│  │     │  ├─ 1009.png
+│  │     │  ├─ 1013.png
+│  │     │  ├─ 1101.png
+│  │     │  ├─ 1102.png
+│  │     │  ├─ 1103.png
+│  │     │  ├─ 1104.png
+│  │     │  ├─ 1105.png
+│  │     │  ├─ 1106.png
+│  │     │  ├─ 1107.png
+│  │     │  ├─ 1108.png
+│  │     │  ├─ 1109.png
+│  │     │  ├─ 1110.png
+│  │     │  ├─ 1111.png
+│  │     │  ├─ 1112.png
+│  │     │  ├─ 1201.png
+│  │     │  ├─ 1202.png
+│  │     │  ├─ 1203.png
+│  │     │  ├─ 1204.png
+│  │     │  ├─ 1205.png
+│  │     │  ├─ 1206.png
+│  │     │  ├─ 1207.png
+│  │     │  ├─ 1208.png
+│  │     │  ├─ 1209.png
+│  │     │  ├─ 1210.png
+│  │     │  ├─ 1211.png
+│  │     │  ├─ 1212.png
+│  │     │  ├─ 1213.png
+│  │     │  ├─ 1214.png
+│  │     │  ├─ 1215.png
+│  │     │  ├─ 1217.png
+│  │     │  ├─ 1218.png
+│  │     │  ├─ 1220.png
+│  │     │  ├─ 1221.png
+│  │     │  ├─ 1222.png
+│  │     │  ├─ 1223.png
+│  │     │  ├─ 1224.png
+│  │     │  ├─ 1225.png
+│  │     │  ├─ 1301.png
+│  │     │  ├─ 1302.png
+│  │     │  ├─ 1303.png
+│  │     │  ├─ 1304.png
+│  │     │  ├─ 1305.png
+│  │     │  ├─ 1306.png
+│  │     │  ├─ 1307.png
+│  │     │  ├─ 1308.png
+│  │     │  ├─ 1309.png
+│  │     │  ├─ 1310.png
+│  │     │  ├─ 1312.png
+│  │     │  ├─ 1313.png
+│  │     │  ├─ 1314.png
+│  │     │  ├─ 1315.png
+│  │     │  ├─ 1317.png
+│  │     │  ├─ 1401.png
+│  │     │  ├─ 1402.png
+│  │     │  ├─ 1403.png
+│  │     │  ├─ 1404.png
+│  │     │  ├─ 1405.png
+│  │     │  ├─ 1407.png
+│  │     │  ├─ 1408.png
+│  │     │  ├─ 8001.png
+│  │     │  ├─ 8002.png
+│  │     │  ├─ 8003.png
+│  │     │  ├─ 8004.png
+│  │     │  ├─ 8005.png
+│  │     │  ├─ 8006.png
+│  │     │  ├─ 8007.png
+│  │     │  └─ 8008.png
+│  │     ├─ gif
+│  │     │  └─ loading.gif
+│  │     ├─ icon
+│  │     │  ├─ star-rail-icon.png
+│  │     │  └─ zenless-icon.png
+│  │     └─ logo.png
+│  ├─ src
+│  │  ├─ api
+│  │  │  ├─ enka.ts
+│  │  │  └─ gacha.ts
+│  │  ├─ App.vue
+│  │  ├─ components
+│  │  │  ├─ avatarModal.vue
+│  │  │  ├─ EnkaProfile.vue
+│  │  │  ├─ GachaAnalyzer.vue
+│  │  │  ├─ NavBar.vue
+│  │  │  ├─ SettingsModal.vue
+│  │  │  └─ Sidebar.vue
+│  │  ├─ dict
+│  │  │  ├─ characters.json
+│  │  │  ├─ eea.py
+│  │  │  ├─ eg.json
+│  │  │  └─ loc.json
+│  │  ├─ i18n
+│  │  │  ├─ en.json
+│  │  │  ├─ ja.json
+│  │  │  └─ zh-CN.json
+│  │  ├─ main.ts
+│  │  ├─ router
+│  │  │  └─ index.ts
+│  │  ├─ shims-vue.d.ts
+│  │  ├─ type
+│  │  │  └─ genshin.ts
+│  │  └─ utils
+│  │     └─ analyzeGacha.ts
+│  ├─ tsconfig.json
+│  └─ vite.config.ts
+├─ docs
+│  ├─ screenshot1.png
+│  └─ screenshot2.gif
+├─ electron-main.js
+├─ LICENSE
+├─ nest-cli.json
+├─ package-lock.json
+├─ package.json
+├─ README.md
+├─ README.zh-CN.md
+├─ server
+│  ├─ data
+│  ├─ package.json.bak
+│  └─ src
+│     ├─ app.module.ts
+│     ├─ enka
+│     │  ├─ dto
+│     │  ├─ entities
+│     │  │  ├─ genshin-data.entity.ts
+│     │  │  └─ type
+│     │  │     └─ genshin.ts
+│     │  ├─ genshin.controller.ts
+│     │  ├─ genshin.module.ts
+│     │  ├─ genshin.service.ts
+│     │  ├─ services
+│     │  │  └─ fetch.ts
+│     │  └─ zzz.ts
+│     ├─ gacha
+│     │  ├─ dto
+│     │  │  └─ fetch-gacha.dto.ts
+│     │  ├─ entities
+│     │  │  └─ gacha-log.entity.ts
+│     │  ├─ gacha.controller.ts
+│     │  ├─ gacha.module.ts
+│     │  └─ gacha.service.ts
+│     ├─ main.ts
+│     └─ models
+├─ tsconfig.json
+├─ tsconfig.server.json
+└─ vite.config.ts
+
+```

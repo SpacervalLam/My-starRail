@@ -1,232 +1,224 @@
 <template>
   <div class="enka-profile">
-    <h2>{{ t('enka.playerProfile') }}</h2>
 
-    <div class="input-group">
-      <label for="uid-input">{{ t('controls.uidLabel') }}:</label>
-      <input 
-        id="uid-input" 
-        v-model="uid" 
-        type="text" 
-        :placeholder="t('enka.uidPlaceholder')" 
-        class="uid-input"
-        list="uid-list"
-      />
-      <datalist id="uid-list">
-        <option v-for="storedUid in storedUids" :key="storedUid" :value="storedUid" />
-      </datalist>
-      <span v-if="loadingUids" class="loading-text">{{ t('controls.loading') }}</span>
-    </div>
-
-    <div class="button-group">
-      <button @click="startGenshin" class="action-button genshin-button" :disabled="isLoading">
-        {{ t('enka.genshinArchive') }}
+    <div class="game-tabs">
+      <button class="game-tab" :class="{ active: selectedGame === 'genshin' }" @click="selectedGame = 'genshin'">
+        <span class="tab-label">{{ t('gameTypes.genshin') }}</span>
+        <div class="tab-decoration"></div>
       </button>
-      <button @click="startGenshinFCVa" class="action-button fcv-button" :disabled="isLoading">
-        {{ t('enka.zenlessArchive') }}
+      <button class="game-tab" :class="{ active: selectedGame === 'zzz' }" @click="selectedGame = 'zzz'">
+        <span class="tab-label">{{ t('gameTypes.zenless') }}</span>
+        <div class="tab-decoration"></div>
       </button>
     </div>
 
-    <div v-if="isLoading" class="loading-container">
-      <img src="/assets/gif/loading.gif" alt="Loading" class="loading-gif">
-      <span class="loading-text">{{ t('controls.loading') }}</span>
+    <div class="header">
+      <h2>{{ t('enka.playerProfile') }}</h2>
     </div>
 
-    <div v-if="error" class="error-message">
-      {{ error }}
+    <div class="controls">
+      <div class="input-wrapper">
+        <label for="uid-input">{{ t('controls.uidLabel') }}:</label>
+        <input list="uid-list" v-model="uid" :placeholder="t('controls.uidPlaceholder')" @input="onUidInput"
+          @change="handleDatalistSelect" @keydown.enter.prevent="handleEnterKey"
+          :maxlength="selectedGame === 'zzz' ? 8 : 9" class="uid-input" />
+        <datalist id="uid-list">
+          <option v-for="u in storedUids" :key="u" :value="u" />
+        </datalist>
+      </div>
+      <button @click="runAnalysis" :disabled="isLoading" class="btn-query">
+        <span v-if="!isLoading">{{ queryButtonText }}</span>
+        <span v-else class="loader"></span>
+      </button>
     </div>
 
-    <div v-if="data" class="data-display">
-      <h3>{{ t('enka.playerInfo') }}</h3>
-      <div class="player-info">
-        <p><strong>{{ t('enka.nickname') }}:</strong> {{ data.playerInfo.nickname }}</p>
-        <p><strong>{{ t('enka.level') }}:</strong> {{ data.playerInfo.level }}</p>
-        <p><strong>{{ t('enka.signature') }}:</strong> {{ data.playerInfo.signature }}</p>
-        <p><strong>{{ t('enka.worldLevel') }}:</strong> {{ data.playerInfo.worldLevel }}</p>
-        <p v-if="data.playerInfo.finishAchievementNum"><strong>{{ t('enka.achievements') }}:</strong> {{
-          data.playerInfo.finishAchievementNum }}</p>
-        <p v-if="data.playerInfo.towerFloorIndex && data.playerInfo.towerLevelIndex">
-          <strong>{{ t('enka.abyssHighest') }}:</strong>
-          {{ data.playerInfo.towerFloorIndex }}-{{ data.playerInfo.towerLevelIndex }}
-        </p>
+    <p v-if="errorMsg" class="error-msg">{{ errorMsg }}</p>
+
+    <div v-if="data" class="data-section">
+      <div class="profile-card">
+        <h3>{{ t('enka.playerInfo') }}</h3>
+        <ul>
+          <li><strong>{{ t('enka.nickname') }}:</strong> {{ data.playerInfo.nickname }}</li>
+          <li><strong>{{ t('enka.level') }}:</strong> {{ data.playerInfo.level }}</li>
+          <li><strong>{{ t('enka.worldLevel') }}:</strong> {{ data.playerInfo.worldLevel }}</li>
+          <li v-if="data.playerInfo.finishAchievementNum">
+            <strong>{{ t('enka.achievements') }}:</strong> {{ data.playerInfo.finishAchievementNum }}
+          </li>
+          <li v-if="data.playerInfo.towerFloorIndex">
+            <strong>{{ t('enka.abyssHighest') }}:</strong>
+            {{ data.playerInfo.towerFloorIndex }}-{{ data.playerInfo.towerLevelIndex }}
+          </li>
+        </ul>
       </div>
 
-      <h3>{{ t('enka.characterList') }}</h3>
-      <div class="character-list">
-        <div class="character-grid">
-          <div v-for="character in data.avatarInfoList" :key="character.avatarId" class="character-card"
-            @click="openModal(character)">
-            <div class="character-basic">
-              <p><strong>{{ t('enka.characterName') }}:</strong> {{ getCharacterName(character.avatarId) }}</p>
-              <p><strong>{{ t('enka.level') }}:</strong> Lv.{{ character.propMap['4001']?.val }}</p>
-            </div>
+      <div class="characters-grid">
+        <div v-for="character in data.avatarInfoList" :key="character.avatarId" class="char-card"
+          @click="openModal(character)">
+          <img :src="getAvatarSrc(character.avatarId)" :alt="getCharacterName(character.avatarId)" class="char-img" />
+          <div class="char-info">
+            <span class="char-name">{{ getCharacterName(character.avatarId) }}</span>
+            <span class="char-level">Lv.{{ character.propMap['4001']?.val }}</span>
           </div>
-
-          <AvatarModal v-if="showModal" :character="currentCharacter" @close="closeModal" />
         </div>
       </div>
     </div>
+
+    <AvatarModal v-if="showModal" :character="currentCharacter" @close="closeModal" />
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed, onMounted } from 'vue';
+import { defineComponent, ref, onMounted, nextTick, computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { fetchGenshinData, fetchFCVaData, fetchAllUids } from '../api/enka';
-import type { GenshinData, FCVaData, Equip } from '../api/enka';
-import AvatarModal from './avatarModal.vue';
+import {
+  fetchGenshinData,
+  fetchZZZData,
+  getCachedData,
+  fetchAllUids
+} from '../api/enka';
+import type { EnkaData } from '../type/genshin';
+import AvatarModal from './AvatarModal.vue';
 import characters from '../dict/characters.json';
 import loc from '../dict/loc.json';
 
-type LocJson = {
-  [lang: string]: {
-    [key: string]: string;
-  };
-};
+type LocJson = Record<string, Record<string, string>>;
 
 export default defineComponent({
   name: 'EnkaProfile',
-  components: {
-    AvatarModal
-  },
+  components: { AvatarModal },
   setup() {
-    // 通用本地化文本获取
-    const getLocalizedText = (textMapHash: string | number, lang = 'zh-cn') => {
-      const hashStr = String(textMapHash);
-      return (loc as LocJson)[lang]?.[hashStr] || hashStr;
-    };
-
-    // 获取角色名称
-    const getCharacterName = (avatarId: string) => {
-      const character = characters[avatarId as keyof typeof characters];
-      if (!character) return avatarId;
-      return getLocalizedText(character.NameTextMapHash);
-    };
-
     const { t } = useI18n();
     const uid = ref('');
+    const storedUids = ref<string[]>([]);
     const isLoading = ref(false);
-    const error = ref('');
-    const data = ref<GenshinData | FCVaData | null>(null);
+    const errorMsg = ref('');
+    const data = ref<EnkaData | null>(null);
     const showModal = ref(false);
     const currentCharacter = ref<any>(null);
-    const storedUids = ref<string[]>([]);
-    const loadingUids = ref(false);
+    const uidInput = ref<HTMLInputElement>();
+    const selectedGame = ref<'genshin' | 'zzz'>('genshin');
 
-    const validateUid = (uid: string) => {
-      return /^\d{9}$/.test(uid);
-    };
+    const gameStorageKey = computed(() => `storedUids_${selectedGame.value}`);
 
-    const getPropName = (key: string | number) => {
-      const keyStr = String(key);
-      return t(`props.${keyStr}`) || keyStr;
-    };
+    const queryButtonText = computed(() =>
+      selectedGame.value === 'genshin'
+        ? t('enka.genshinArchive')
+        : t('enka.zenlessArchive')
+    );
 
-    const equipNameMap: Record<string, string> = {
-      '375145': t('equip.weapon_sword_01'),
-      '378571': t('equip.weapon_sword_02'),
-      '128302': t('equip.weapon_claymore_01'),
-      '342196': t('equip.weapon_bow_01'),
-      '389022': t('equip.artifact_flower_01'),
-      '389023': t('equip.artifact_plume_01'),
-      '389024': t('equip.artifact_sands_01'),
-      '389025': t('equip.artifact_goblet_01'),
-      '389026': t('equip.artifact_circlet_01')
-    };
+    // 初始化历史 UID 列表
+    onMounted(async () => {
+      const stored = localStorage.getItem(gameStorageKey.value);
+      storedUids.value = JSON.parse(stored || '[]'); 
+    });
 
-    const getEquipName = (equipOrHash: Equip | string) => {
-      if (typeof equipOrHash === 'string') {
-        return equipNameMap[equipOrHash] || getLocalizedText(equipOrHash);
+
+    // 切换游戏时重置输入
+    watch(selectedGame, (newVal) => {
+      uid.value = '';
+      const key = `storedUids_${newVal}`;
+      const stored = localStorage.getItem(key);
+      storedUids.value = JSON.parse(stored || '[]'); 
+    });
+
+    function onUidInput() {
+      uid.value = uid.value.replace(/[^0-9]/g, '');
+      const maxLength = selectedGame.value === 'zzz' ? 8 : 9;
+      if (uid.value.length > maxLength) {
+        uid.value = uid.value.slice(0, maxLength);
       }
-      return getLocalizedText(equipOrHash.flat.nameTextMapHash);
+    }
+
+    const handleDatalistSelect = (e: Event) => {
+      const input = e.target as HTMLInputElement;
+      nextTick(() => {
+        input.blur();
+        const required = selectedGame.value === 'zzz' ? 8 : 9;
+        if (input.value.length === required) {
+          runAnalysis();
+        }
+      });
     };
 
-    const getEquipSetName = (equip: Equip) => {
-      if (!equip.flat.setNameTextMapHash) return '';
-      return getLocalizedText(equip.flat.setNameTextMapHash);
-    };
-
-    const formatStatValue = (key: string | number, value: number) => {
-      const keyStr = String(key);
-      const percentKeys = ['20', '22', '23', '26', '28', '40', '41', '42', '43', '44', '45', '46', '50'];
-      if (percentKeys.includes(keyStr)) {
-        return (value * 100).toFixed(1) + '%';
+    // 回车时：只有当格式合法才查询
+    const handleEnterKey = () => {
+      const required = selectedGame.value === 'zzz' ? 8 : 9;
+      if (/^\d+$/.test(uid.value) && uid.value.length === required) {
+        runAnalysis();
       }
-      return Math.round(value);
     };
 
-    const openModal = (character: any) => {
-      currentCharacter.value = character;
+    const getCharacterName = (avatarId: string | number) => {
+      const char = (characters as any)[String(avatarId)];
+      return char
+        ? (loc as LocJson)['zh-cn'][String(char.NameTextMapHash)]
+        : String(avatarId);
+    };
+    const getAvatarSrc = (id: number | string) => `/assets/avatars/${id}.png`;
+
+    const runAnalysis = async () => {
+      // 等待下一个DOM更新后，失去UID输入框焦点
+      await nextTick();
+      uidInput.value?.blur();
+
+      // 设置加载状态为真，并清除错误信息
+      isLoading.value = true;
+      errorMsg.value = '';
+
+      try {
+        // 根据选中的游戏进行不同的数据获取逻辑
+        if (selectedGame.value === 'genshin') {
+          try {
+            // 尝试从缓存中获取数据
+            data.value = await getCachedData(uid.value);
+          } catch {
+            // 如果缓存获取失败，将数据设置为null
+            data.value = null;
+          }
+          // 获取原神的数据
+          data.value = await fetchGenshinData(uid.value);
+        } else {
+          // 处理ZZZ数据
+          const zzzData = await fetchZZZData(uid.value);
+          // 根据实际数据结构更新...
+          data.value = zzzData;
+        }
+      } catch (e: any) {
+        // 如果数据获取过程中发生错误，设置错误信息
+        errorMsg.value = e.message || t('errors.generic');
+      } finally {
+        // 无论结果如何，都将加载状态设置为假
+        isLoading.value = false;
+      }
+    };
+    const openModal = (c: any) => {
+      currentCharacter.value = c;
       showModal.value = true;
     };
-
     const closeModal = () => {
       showModal.value = false;
     };
 
-    const startGenshin = async () => {
-      if (!validateUid(uid.value)) {
-        error.value = t('enka.invalidUid');
-        return;
-      }
-
-      isLoading.value = true;
-      error.value = '';
-      data.value = null;
-      try {
-        data.value = await fetchGenshinData(uid.value);
-      } catch (err) {
-        error.value = err instanceof Error ? err.message : t('enka.fetchGenshin') + t('controls.loading');
-      } finally {
-        isLoading.value = false;
-      }
-    };
-
-    const startGenshinFCVa = async () => {
-      if (!validateUid(uid.value)) {
-        error.value = t('enka.invalidUid');
-        return;
-      }
-
-      isLoading.value = true;
-      error.value = '';
-      data.value = null;
-      try {
-        data.value = await fetchFCVaData(uid.value);
-      } catch (err) {
-        error.value = err instanceof Error ? err.message.replace(/\(\d+\)$/, '') : t('enka.fetchFCVa') + t('controls.loading');
-      } finally {
-        isLoading.value = false;
-      }
-    };
-
-    onMounted(async () => {
-      loadingUids.value = true;
-      try {
-        storedUids.value = await fetchAllUids();
-      } finally {
-        loadingUids.value = false;
-      }
-    });
-
     return {
       t,
       uid,
+      storedUids,   
       isLoading,
-      error,
+      errorMsg,
       data,
       showModal,
       currentCharacter,
-      storedUids,
-      loadingUids,
-      getCharacterName,
-      getPropName,
-      getEquipName,
-      formatStatValue,
-      startGenshin,
-      startGenshinFCVa,
+      uidInput,
+      selectedGame,
+      queryButtonText,
+      onUidInput,
+      runAnalysis,
       openModal,
-      closeModal
+      closeModal,
+      getCharacterName,
+      getAvatarSrc,
+      handleDatalistSelect,
+      handleEnterKey,
     };
   }
 });
@@ -234,220 +226,315 @@ export default defineComponent({
 
 <style scoped>
 .enka-profile {
-  padding: 20px;
-  max-width: 800px;
-  margin: 0 auto;
-  font-family: Arial, sans-serif;
-}
-
-h2 {
-  text-align: center;
-  margin-bottom: 20px;
+  place-items: center;
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+  font-family: 'Noto Sans SC', sans-serif;
   color: #333;
+  position: relative;
 }
 
-.input-group {
-  margin-bottom: 20px;
+.game-tabs {
+  position: fixed;
+  top: 50%;
+  right: -2rem;
+  transform: translateY(-50%);
+  z-index: 100;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding-right: 0.5rem;
+  filter: drop-shadow(-2px 0 4px rgba(0, 0, 0, 0.1));
 }
 
-.input-group label {
-  margin-right: 10px;
-  font-weight: bold;
-}
-
-.uid-input {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  flex-grow: 1;
-}
-
-.button-group {
-  display: flex;
-  gap: 15px;
-  margin-bottom: 20px;
-}
-
-.action-button {
-  padding: 10px 15px;
+.game-tab {
+  position: relative;
+  background: #fff;
   border: none;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: bold;
+  width: 52px;
+  height: 130px;
+  padding: 0;
   cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow:
+    -6px 6px 16px rgba(0, 0, 0, 0.1),
+    inset -3px 0 6px rgba(0, 0, 0, 0.08);
+  border-radius: 12px 0 0 12px;
+  overflow: hidden;
+  transform-origin: right center;
+}
+
+.game-tab:hover {
+  width: 68px;
+  transform: translateX(-12px) rotateZ(-3deg);
+  box-shadow:
+    -8px 8px 20px rgba(0, 0, 0, 0.15),
+    inset -3px 0 6px rgba(0, 0, 0, 0.1);
+}
+
+.game-tab.active {
+  width: 72px;
+  transform: translateX(-18px) rotateZ(-5deg);
+  background: linear-gradient(45deg, #6366F1, #4F46E5);
+  box-shadow:
+    -8px 8px 24px rgba(0, 0, 0, 0.2),
+    inset -3px 0 6px rgba(255, 255, 255, 0.1);
+}
+
+.game-tab.active .tab-label {
+  color: white;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.tab-label {
+  position: absolute;
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #4b5563;
   transition: all 0.3s ease;
-  flex: 1;
-  white-space: nowrap;
-  min-width: 120px;
+  letter-spacing: 2px;
 }
 
-.action-button:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+.tab-decoration {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 28px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 2px;
+  opacity: 0.8;
+  filter: blur(1px);
 }
 
-.action-button:disabled {
+.controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 1rem;
+  gap: 1rem;
+}
+
+.btn-query {
+  padding: 0.8rem 2.2rem;
+  background: linear-gradient(45deg, #3B82F6, #6366F1);
+  color: white;
+  border: none;
+  border-radius: 1rem;
+  font-weight: 600;
+  font-size: 1.1rem;
+  box-shadow:
+    0 6px 12px -2px rgba(0, 0, 0, 0.15),
+    0 4px 8px -2px rgba(0, 0, 0, 0.1);
+  transition:
+    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.2s ease;
+
+}
+
+.btn-query:hover:not(:disabled) {
+  transform: translateY(-3px) scale(1.05);
+  box-shadow:
+    0 12px 24px -4px rgba(0, 0, 0, 0.2),
+    0 6px 12px -4px rgba(0, 0, 0, 0.1);
+}
+
+.btn-primary:disabled {
   opacity: 0.7;
   cursor: not-allowed;
 }
 
-.loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  margin: 20px 0;
+.btn-secondary {
+  background: #10B981;
+  color: white;
 }
 
-.loading-gif {
+.btn-secondary:hover:not(:disabled) {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+.loader {
+  display: inline-block;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.error-msg {
+  color: #EF4444;
+  margin: 1rem 0;
+  text-align: center;
+  font-weight: 500;
+}
+
+.data-section {
+  margin-top: 2rem;
+}
+
+.profile-card {
+  background: #f8fafc;
+  padding: 1.5rem;
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+.profile-card h3 {
+  font-size: 1.5rem;
+  color: #1E3A8A;
+  margin-bottom: 1rem;
+}
+
+.profile-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.profile-card li {
+  font-size: 1rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.profile-card strong {
+  color: #1E3A8A;
+  min-width: 100px;
+}
+
+.characters-grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+}
+
+.char-card {
+  background: white;
+  padding: 1rem;
+  border-radius: 1rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  text-align: center;
+}
+
+.char-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px -1px rgba(0, 0, 0, 0.15);
+}
+
+.char-img {
   width: 80px;
   height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin: 0 auto 0.75rem;
+  border: 2px solid #e2e8f0;
 }
 
-.loading-text {
-  animation: bounce 0.8s infinite alternate;
-  font-size: 18px;
-  font-weight: bold;
+.char-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
-@keyframes bounce {
+.char-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #1e293b;
+  line-height: 1.2;
+}
+
+.char-level {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+@media (max-width: 768px) {
+  .game-tabs {
+    top: auto;
+    bottom: 0;
+    right: 50%;
+    transform: translateX(50%);
+    flex-direction: row;
+    padding: 0.8rem;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(8px);
+    border-radius: 24px 24px 0 0;
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.15);
+    gap: 1rem;
+  }
+
+  .game-tab {
+    width: 100px;
+    height: 52px;
+    border-radius: 16px 16px 0 0;
+    transform-origin: center bottom;
+  }
+
+  .game-tab:hover {
+    width: 110px;
+    transform: translateY(-10px) rotateZ(3deg);
+  }
+
+  .game-tab.active {
+    width: 120px;
+    transform: translateY(-15px) rotateZ(5deg);
+  }
+
+  .tab-label {
+    writing-mode: horizontal-tb;
+    font-size: 1rem;
+    letter-spacing: normal;
+  }
+
+}
+
+/* 添加错误提示动画 */
+.error-msg {
+  animation: shake 0.4s ease-in-out;
+}
+
+@keyframes shake {
 
   0%,
   100% {
-    transform: translateY(0);
+    transform: translateX(0);
   }
 
-  50% {
-    transform: translateY(-3px);
+  20% {
+    transform: translateX(-10px);
   }
-}
 
-.genshin-button {
-  background-color: #ff9678;
-  color: white;
-}
+  40% {
+    transform: translateX(10px);
+  }
 
-.fcv-button {
-  background-color: #78a8ff;
-  color: white;
-}
+  60% {
+    transform: translateX(-7px);
+  }
 
-.error-message {
-  color: #ff4444;
-  padding: 10px;
-  background-color: #ffeeee;
-  border-radius: 4px;
-  margin-bottom: 20px;
-}
-
-.data-display {
-  background-color: #f8f9fa;
-  padding: 20px;
-  border-radius: 8px;
-}
-
-.player-info {
-  margin-bottom: 20px;
-}
-
-.player-info p {
-  margin: 5px 0;
-}
-
-.character-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 15px;
-}
-
-.character-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 15px;
-}
-
-.character-card {
-  background-color: white;
-  padding: 15px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  overflow: hidden;
-  position: relative;
-}
-
-.character-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-}
-
-.character-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 100%);
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.character-card:hover::before {
-  opacity: 1;
-}
-
-.character-basic {
-  margin-bottom: 10px;
-}
-
-.character-basic p {
-  margin: 5px 0;
-  font-size: 14px;
-}
-
-
-
-.stat-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.stat-item {
-  display: flex;
-  justify-content: space-between;
-  font-size: 13px;
-}
-
-.stat-name {
-  color: #666;
-}
-
-.stat-value {
-  font-weight: bold;
-}
-
-.equip-item {
-  margin-top: 15px;
-  padding: 10px;
-  background-color: #f8f9fa;
-  border-radius: 6px;
-}
-
-.equip-item h4 {
-  margin: 0 0 5px 0;
-  font-size: 14px;
-}
-
-.equip-item p {
-  margin: 3px 0;
-  font-size: 13px;
-  color: #555;
+  80% {
+    transform: translateX(7px);
+  }
 }
 </style>

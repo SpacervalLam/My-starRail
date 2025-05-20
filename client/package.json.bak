@@ -1,0 +1,29 @@
+{
+  "name": "my-starrail-client",
+  "version": "1.2.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build --config ./vite.config.ts",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-svg-core": "^6.7.2",
+    "@fortawesome/free-solid-svg-icons": "^6.7.2",
+    "@fortawesome/vue-fontawesome": "^3.0.8",
+    "axios": "^1.9.0",
+    "chart.js": "^3.9.1",
+    "date-fns": "^4.1.0",
+    "vue": "^3.2.0",
+    "vue-chart-3": "^3.1.8",
+    "vue-i18n": "^9.14.4",
+    "vue-router": "^4.5.1"
+  },
+  "devDependencies": {
+    "@types/chart.js": "^2.9.41",
+    "@vitejs/plugin-vue": "^4.0.0",
+    "typescript": "^5.8.3",
+    "vite": "^4.0.0"
+  }
+}

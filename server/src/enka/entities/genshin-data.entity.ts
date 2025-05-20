@@ -5,6 +5,8 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { Type } from 'class-transformer';
+import { AvatarInfo, PlayerInfo } from './type/genshin';
 
 @Entity('genshin_data')
 export class GenshinData {
@@ -12,10 +14,12 @@ export class GenshinData {
   uid!: string;  // 加上 `!`，表示此属性会被 TypeORM 在运行时赋值
 
   @Column('simple-json', { name: 'player_info' })
-  playerInfo!: any;  
+  @Type(() => Object)
+  playerInfo!: PlayerInfo;  
 
   @Column('simple-json', { name: 'avatar_info_list' })
-  avatarInfoList!: any[];  
+  @Type(() => Object)
+  avatarInfoList!: AvatarInfo[];
 
   @Column('int')
   ttl!: number;  
