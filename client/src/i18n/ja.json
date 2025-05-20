@@ -68,9 +68,12 @@
   },
   "enka": {
     "title": "Enka Network ツール",
+    "playerProfile": "プレイヤープロフィール",
     "uidPlaceholder": "9桁のUIDを入力してください（例: 237775242）",
     "fetchGenshin": "Genshinデータを取得",
     "fetchFCVa": "FCVaデータを取得",
+    "genshinArchive": "原神アーカイブ",
+    "zenlessArchive": "ゼンレスアーカイブ",
     "playerInfo": "プレイヤー情報",
     "nickname": "ニックネーム",
     "level": "レベル",
@@ -80,9 +83,7 @@
     "characterId": "キャラクターID",
     "invalidUid": "有効な9桁のUIDを入力してください",
     "achievements": "実績数",
-    "spiralAbyss": "深境螺旋",
-    "floorLabel": "第{}層",
-    "chamberLabel": "{}間"
+    "abyssHighest": "深境螺旋"
   },
   "props": {
     "1": "基礎HP",

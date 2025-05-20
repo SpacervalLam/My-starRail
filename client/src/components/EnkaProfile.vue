@@ -1,32 +1,18 @@
 <template>
   <div class="enka-profile">
-    <h2>{{ t('enka.title') }}</h2>
-    
+    <h2>{{ t('enka.playerProfile') }}</h2>
+
     <div class="input-group">
       <label for="uid-input">{{ t('controls.uidLabel') }}:</label>
-      <input
-        id="uid-input"
-        v-model="uid"
-        type="text"
-        :placeholder="t('enka.uidPlaceholder')"
-        class="uid-input"
-      />
+      <input id="uid-input" v-model="uid" type="text" :placeholder="t('enka.uidPlaceholder')" class="uid-input" />
     </div>
 
     <div class="button-group">
-      <button 
-        @click="startGenshin" 
-        class="action-button genshin-button"
-        :disabled="isLoading"
-      >
-        {{ t('enka.fetchGenshin') }}
+      <button @click="startGenshin" class="action-button genshin-button" :disabled="isLoading">
+        {{ t('enka.genshinArchive') }}
       </button>
-      <button 
-        @click="startGenshinFCVa" 
-        class="action-button fcv-button"
-        :disabled="isLoading"
-      >
-        {{ t('enka.fetchFCVa') }}
+      <button @click="startGenshinFCVa" class="action-button fcv-button" :disabled="isLoading">
+        {{ t('enka.zenlessArchive') }}
       </button>
     </div>
 
@@ -46,33 +32,26 @@
         <p><strong>{{ t('enka.level') }}:</strong> {{ data.playerInfo.level }}</p>
         <p><strong>{{ t('enka.signature') }}:</strong> {{ data.playerInfo.signature }}</p>
         <p><strong>{{ t('enka.worldLevel') }}:</strong> {{ data.playerInfo.worldLevel }}</p>
-        <p v-if="data.playerInfo.finishAchievementNum"><strong>{{ t('enka.achievements') }}:</strong> {{ data.playerInfo.finishAchievementNum }}</p>
-              <p v-if="data.playerInfo.towerFloorIndex && data.playerInfo.towerLevelIndex">
-                <strong>{{ t('enka.spiralAbyss') }}:</strong> 
-                {{ t('enka.floorLabel', [data.playerInfo.towerFloorIndex]) }} {{ t('enka.chamberLabel', [data.playerInfo.towerLevelIndex]) }}
-              </p>
+        <p v-if="data.playerInfo.finishAchievementNum"><strong>{{ t('enka.achievements') }}:</strong> {{
+          data.playerInfo.finishAchievementNum }}</p>
+        <p v-if="data.playerInfo.towerFloorIndex && data.playerInfo.towerLevelIndex">
+          <strong>{{ t('enka.abyssHighest') }}:</strong>
+          {{ data.playerInfo.towerFloorIndex }}-{{ data.playerInfo.towerLevelIndex }}
+        </p>
       </div>
 
       <h3>{{ t('enka.characterList') }}</h3>
       <div class="character-list">
         <div class="character-grid">
-          <div 
-            v-for="character in data.avatarInfoList" 
-            :key="character.avatarId"
-            class="character-card"
-            @click="openModal(character)"
-          >
+          <div v-for="character in data.avatarInfoList" :key="character.avatarId" class="character-card"
+            @click="openModal(character)">
             <div class="character-basic">
               <p><strong>{{ t('enka.characterName') }}:</strong> {{ getCharacterName(character.avatarId) }}</p>
               <p><strong>{{ t('enka.level') }}:</strong> Lv.{{ character.propMap['4001']?.val }}</p>
             </div>
           </div>
-          
-          <AvatarModal 
-            v-if="showModal"
-            :character="currentCharacter"
-            @close="closeModal"
-          />
+
+          <AvatarModal v-if="showModal" :character="currentCharacter" @close="closeModal" />
         </div>
       </div>
     </div>
@@ -83,7 +62,7 @@
 import { defineComponent, ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { fetchGenshinData, fetchFCVaData } from '../api/enka';
-import type { GenshinData, FCVaData } from '../api/enka';
+import type { GenshinData, FCVaData, Equip } from '../api/enka';
 import AvatarModal from './avatarModal.vue';
 import characters from '../dict/characters.json';
 import loc from '../dict/loc.json';
@@ -100,14 +79,19 @@ export default defineComponent({
     AvatarModal
   },
   setup() {
+    // 通用本地化文本获取
+    const getLocalizedText = (textMapHash: string | number, lang = 'zh-cn') => {
+      const hashStr = String(textMapHash);
+      return (loc as LocJson)[lang]?.[hashStr] || hashStr;
+    };
+
+    // 获取角色名称
     const getCharacterName = (avatarId: string) => {
       const character = characters[avatarId as keyof typeof characters];
       if (!character) return avatarId;
-      
-      const nameTextMapHash = character.NameTextMapHash;
-      const zhName = (loc as LocJson)['zh-cn'][String(nameTextMapHash)];
-      return zhName || avatarId;
+      return getLocalizedText(character.NameTextMapHash);
     };
+
     const { t } = useI18n();
     const uid = ref('');
     const isLoading = ref(false);
@@ -137,13 +121,23 @@ export default defineComponent({
       '389026': t('equip.artifact_circlet_01')
     };
 
-    const getEquipName = (hash: string) => {
-      return equipNameMap[hash] || hash;
+    // 统一装备名称获取函数
+    const getEquipName = (equipOrHash: Equip | string) => {
+      if (typeof equipOrHash === 'string') {
+        return equipNameMap[equipOrHash] || getLocalizedText(equipOrHash);
+      }
+      return getLocalizedText(equipOrHash.flat.nameTextMapHash);
+    };
+
+    // 获取装备套装名称
+    const getEquipSetName = (equip: Equip) => {
+      if (!equip.flat.setNameTextMapHash) return '';
+      return getLocalizedText(equip.flat.setNameTextMapHash);
     };
 
     const formatStatValue = (key: string | number, value: number) => {
       const keyStr = String(key);
-      const percentKeys = ['20','22','23','26','28','40','41','42','43','44','45','46','50'];
+      const percentKeys = ['20', '22', '23', '26', '28', '40', '41', '42', '43', '44', '45', '46', '50'];
       if (percentKeys.includes(keyStr)) {
         return (value * 100).toFixed(1) + '%';
       }
@@ -255,7 +249,7 @@ h2 {
 }
 
 .action-button {
-  padding: 12px 20px;
+  padding: 10px 15px;
   border: none;
   border-radius: 8px;
   font-size: 16px;
@@ -263,6 +257,8 @@ h2 {
   cursor: pointer;
   transition: all 0.3s ease;
   flex: 1;
+  white-space: nowrap;
+  min-width: 120px;
 }
 
 .action-button:hover:not(:disabled) {
@@ -296,9 +292,12 @@ h2 {
 }
 
 @keyframes bounce {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0);
   }
+
   50% {
     transform: translateY(-3px);
   }
@@ -371,7 +370,7 @@ h2 {
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 100%);
   opacity: 0;
   transition: opacity 0.3s ease;
 }

@@ -68,9 +68,12 @@
   },
   "enka": {
     "title": "Enka Network 工具",
+    "playerProfile": "档案库",
     "uidPlaceholder": "输入9位UID (例如 237775242)",
     "fetchGenshin": "获取原神数据",
-    "fetchFCVa": "获取FCVa数据",
+    "fetchFCVa": "获取绝区零数据",
+    "genshinArchive": "原神档案",
+    "zenlessArchive": "绝区零档案",
     "playerInfo": "玩家信息",
     "nickname": "昵称",
     "level": "等级",
@@ -81,9 +84,7 @@
     "invalidUid": "请输入有效的9位UID",
     "characterName": "角色名称",
     "achievements": "成就数量",
-    "spiralAbyss": "深渊战绩",
-    "floorLabel": "第{}层",
-    "chamberLabel": "{}间"
+    "abyssHighest": "本期最高"
   },
   "props": {
     "1": "基础生命值",

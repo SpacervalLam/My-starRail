@@ -54,13 +54,26 @@ interface Equip {
     weapon?: Weapon;
     reliquary?: Reliquary;
     flat: Flat;
+    [key: string]: any; // 允许其他可能的字段
 }
 
 interface AvatarInfo {
     avatarId: number;
     propMap: PropMap;
+    talentIdList?: number[];
     fightPropMap: FightPropMap;
+    skillDepotId: number;
+    inherentProudSkillList: number[];
+    skillLevelMap: {
+        [key: string]: number;
+    };
+    proudSkillExtraLevelMap?: {
+        [key: string]: number;
+    };
     equipList: Equip[];
+    fetterInfo?: {
+        expLevel: number;
+    };
 }
 
 interface PlayerInfo {
@@ -68,9 +81,24 @@ interface PlayerInfo {
     level: number;
     signature: string;
     worldLevel: number;
+    nameCardId: number;
+    finishAchievementNum: number;
     towerFloorIndex: number;
     towerLevelIndex: number;
-    finishAchievementNum: number;
+    showAvatarInfoList: Array<{
+        avatarId: number;
+        level: number;
+    }>;
+    showNameCardIdList: number[];
+    profilePicture: {
+        id: number;
+    };
+    theaterActIndex?: number;
+    theaterModeIndex?: number;
+    theaterStarIndex?: number;
+    isShowAvatarTalent?: boolean;
+    fetterCount?: number;
+    towerStarIndex?: number;
 }
 
 interface EnkaData {
@@ -78,6 +106,7 @@ interface EnkaData {
     avatarInfoList: AvatarInfo[];
     uid: string;
     ttl: number;
+    [key: string]: any; // 允许其他可能的字段
 }
 
 // 获取数据的异步函数

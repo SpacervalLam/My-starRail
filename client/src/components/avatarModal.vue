@@ -1,11 +1,11 @@
 <template>
   <div class="modal-overlay" @click.self="closeModal">
-    <div class="avatar-modal">
+    <div class="avatar-modal" ref="modalRef">
       <button class="close-button" @click="closeModal">×</button>
       
       <div class="modal-content">
         <div class="character-basic">
-          <h3>{{ character.avatarId }}</h3>
+          <h3>{{ getCharacterName(character.avatarId) }}</h3>
           <p>Lv.{{ character.propMap['4001']?.val }}</p>
         </div>
         
@@ -42,8 +42,16 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue';
+import { defineComponent, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import characters from '../dict/characters.json';
+import loc from '../dict/loc.json';
+
+type LocJson = {
+  [lang: string]: {
+    [key: string]: string;
+  };
+};
 
 export default defineComponent({
   name: 'AvatarModal',
@@ -84,15 +92,37 @@ export default defineComponent({
       return equipNameMap[hash] || hash;
     };
 
+    const getCharacterName = (avatarId: string) => {
+      const character = characters[avatarId as keyof typeof characters];
+      if (!character) return avatarId;
+      
+      const nameTextMapHash = character.NameTextMapHash;
+      const zhName = (loc as LocJson)['zh-cn'][String(nameTextMapHash)];
+      return zhName || avatarId;
+    };
+
+    const modalRef = ref<HTMLElement | null>(null);
+
     const closeModal = () => {
-      emit('close');
+      if (modalRef.value) {
+        modalRef.value.classList.add('closing');
+        const onAnimationEnd = () => {
+          modalRef.value?.removeEventListener('animationend', onAnimationEnd);
+          emit('close');
+        };
+        modalRef.value.addEventListener('animationend', onAnimationEnd);
+      } else {
+        emit('close');
+      }
     };
 
     return {
+      getCharacterName,
       getPropName,
       formatStatValue,
       getEquipName,
-      closeModal
+      closeModal,
+      modalRef
     };
   }
 });
@@ -105,7 +135,8 @@ export default defineComponent({
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -114,74 +145,128 @@ export default defineComponent({
 }
 
 .avatar-modal {
-  background-color: white;
-  border-radius: 12px;
-  width: 80%;
-  max-width: 600px;
-  max-height: 80vh;
-  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 16px;
+  width: 85%;
+  max-width: 650px;
+  max-height: 85vh;
+  overflow-y: scroll;
   position: relative;
   transform: translateY(20px);
   opacity: 0;
   animation: modalIn 0.3s 0.1s ease-out forwards;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.avatar-modal::-webkit-scrollbar {
+  display: none;
 }
 
 .close-button {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  background: none;
+  top: 16px;
+  right: 16px;
+  background: rgba(0, 0, 0, 0.1);
   border: none;
-  font-size: 24px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
   cursor: pointer;
-  color: #666;
+  color: #555;
+  transition: all 0.2s ease;
+}
+
+.close-button:hover {
+  background: rgba(0, 0, 0, 0.2);
+  transform: scale(1.1);
 }
 
 .modal-content {
-  padding: 30px;
+  padding: 40px;
 }
 
 .character-basic {
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 30px;
 }
 
 .character-basic h3 {
   margin: 0;
-  color: #333;
+  font-size: 24px;
+  color: #2c3e50;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.character-basic p {
+  margin-top: 8px;
+  color: #7f8c8d;
+  font-size: 16px;
 }
 
 .character-details {
-  margin-top: 20px;
+  margin-top: 30px;
 }
 
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
+  gap: 15px;
 }
 
 .stat-item {
   display: flex;
   justify-content: space-between;
-  padding: 8px;
-  background-color: #f8f9fa;
-  border-radius: 6px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.8), rgba(245,245,245,0.9));
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  transition: transform 0.2s ease;
+}
+
+.stat-item:hover {
+  transform: translateY(-2px);
 }
 
 .stat-name {
-  color: #666;
+  color: #34495e;
+  font-weight: 500;
 }
 
 .stat-value {
-  font-weight: bold;
+  font-weight: 600;
+  color: #3498db;
 }
 
 .equip-item {
-  margin-top: 15px;
-  padding: 12px;
-  background-color: #f0f2f5;
-  border-radius: 8px;
+  margin-top: 20px;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(240,240,240,0.95));
+  border-radius: 12px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+  transition: all 0.3s ease;
+}
+
+.equip-item:hover {
+  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+  transform: translateY(-2px);
+}
+
+.equip-item h4 {
+  color: #2c3e50;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.equip-item p {
+  color: #7f8c8d;
+  margin: 6px 0;
+  font-size: 14px;
 }
 
 @keyframes fadeIn {
@@ -191,12 +276,27 @@ export default defineComponent({
 
 @keyframes modalIn {
   from { 
-    transform: translateY(20px);
+    transform: translateY(20px) scale(0.98);
     opacity: 0;
   }
   to { 
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
     opacity: 1;
+  }
+}
+
+.closing {
+  animation: modalOut 0.3s ease-out forwards;
+}
+
+@keyframes modalOut {
+  from { 
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  to { 
+    transform: translateY(40px) scale(0.95);
+    opacity: 0;
   }
 }
 </style>

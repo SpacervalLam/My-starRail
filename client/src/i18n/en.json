@@ -68,9 +68,12 @@
   },
   "enka": {
     "title": "Enka Network Tool",
+    "playerProfile": "Player Profile",
     "uidPlaceholder": "Enter 9-digit UID (e.g. 237775242)",
     "fetchGenshin": "Fetch Genshin Data",
     "fetchFCVa": "Fetch FCVa Data",
+    "genshinArchive": "Genshin Archive",
+    "zenlessArchive": "Zenless Archive",
     "playerInfo": "Player Info",
     "nickname": "Nickname",
     "level": "Level",
@@ -80,9 +83,7 @@
     "characterId": "Character ID",
     "invalidUid": "Please enter a valid 9-digit UID",
     "achievements": "Achievements",
-    "spiralAbyss": "Spiral Abyss",
-    "floorLabel": "Floor{}",
-    "chamberLabel": "Chamber{}"
+    "abyssHighest": "Abyss"
   },
   "props": {
     "1": "Base HP",
