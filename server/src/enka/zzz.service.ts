@@ -2,27 +2,27 @@ import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { QueryFailedError, Repository } from 'typeorm';
 import axios from 'axios';
-import { GenshinData } from './entities/genshin-data.entity';
-import { EnkaData } from './entities/type/genshin';
-import { fetchGenshinData } from './services/fetch';
+import { ZZZData } from './entities/zzz-data.entity';
+import { ZZZPlayerData } from './entities/type/zzz';
+import { fetchZZZData } from './services/fetch';
 
 @Injectable()
-export class GenshinService {
+export class ZZZService {
   constructor(
-    @InjectRepository(GenshinData)
-    private readonly dataRepo: Repository<GenshinData>,
+    @InjectRepository(ZZZData)
+    private readonly dataRepo: Repository<ZZZData>,
   ) { }
 
-  public async fetchAndStoreData(uid: string): Promise<GenshinData | null> {
-    let enkaData: EnkaData | null;
+  public async fetchAndStoreData(uid: string): Promise<ZZZData | null> {
+    let zzzData: ZZZPlayerData | null;
     try {
-      enkaData = await fetchGenshinData(uid);
-      if (!enkaData) {
+      zzzData = await fetchZZZData(uid);
+      if (!zzzData) {
         throw new InternalServerErrorException('UID不存在或未公开信息');
       }
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status) {
-        throw error; // Propagate the error with status code
+        throw error;
       }
       throw new InternalServerErrorException('获取数据失败');
     }
@@ -31,13 +31,13 @@ export class GenshinService {
       await this.dataRepo.upsert(
         {
           uid,
-          playerInfo: enkaData.playerInfo,
-          avatarInfoList: enkaData.avatarInfoList,
-          ttl: enkaData.ttl,
+          playerInfo: zzzData.PlayerInfo,
+          updatedAt: new Date(),
+          ttl: zzzData.ttl,
         },
         ['uid'],
       );
-      return this.dataRepo.findOne({ where: { uid } }) as Promise<GenshinData>;
+      return this.dataRepo.findOne({ where: { uid } }) as Promise<ZZZData>;
     } catch (err) {
       if (err instanceof QueryFailedError) {
         throw new InternalServerErrorException('数据库操作异常');
@@ -46,13 +46,12 @@ export class GenshinService {
     }
   }
 
-  public async getDataFromDb(uid: string): Promise<GenshinData | null> {
+  public async getDataFromDb(uid: string): Promise<ZZZData | null> {
     return this.dataRepo.findOne({ where: { uid } });
   }
 
   public async getAllUids(): Promise<string[]> {
     const records = await this.dataRepo.find({ select: ['uid'] });
-    console.log("从数据库中找到了以下uid：" + records.map(r => r.uid));
     return records.map(r => r.uid).filter((u): u is string => !!u);
   }
 }

@@ -1,6 +1,6 @@
 <template>
   <div class="enka-profile">
-
+    <!-- 游戏切换 Tabs -->
     <div class="game-tabs">
       <button class="game-tab" :class="{ active: selectedGame === 'genshin' }" @click="selectedGame = 'genshin'">
         <span class="tab-label">{{ t('gameTypes.genshin') }}</span>
@@ -16,6 +16,7 @@
       <h2>{{ t('enka.playerProfile') }}</h2>
     </div>
 
+    <!-- 输入 UID 和查询 -->
     <div class="controls">
       <div class="input-wrapper">
         <label for="uid-input">{{ t('controls.uidLabel') }}:</label>
@@ -34,6 +35,7 @@
 
     <p v-if="errorMsg" class="error-msg">{{ errorMsg }}</p>
 
+    <!-- 展示资料卡片 -->
     <div v-if="data" class="data-section">
       <div class="profile-card">
         <h3>{{ t('enka.playerInfo') }}</h3>
@@ -51,18 +53,22 @@
         </ul>
       </div>
 
+      <!-- 角色网格 -->
       <div class="characters-grid">
         <div v-for="character in data.avatarInfoList" :key="character.avatarId" class="char-card"
           @click="openModal(character)">
-          <img :src="getAvatarSrc(character.avatarId)" :alt="getCharacterName(character.avatarId)" class="char-img" />
+          <div class="char-img">
+            <img :src="getAvatarSrc(character.avatarId)" :alt="getCharacterName(character.avatarId)" />
+          </div>
           <div class="char-info">
             <span class="char-name">{{ getCharacterName(character.avatarId) }}</span>
-            <span class="char-level">Lv.{{ character.propMap['4001']?.val }}</span>
+            <span class="char-level">Lv.{{ getCharacterLevel(character) }}</span>
           </div>
         </div>
       </div>
     </div>
 
+    <!-- 角色详情模态框 -->
     <AvatarModal v-if="showModal" :character="currentCharacter" @close="closeModal" />
   </div>
 </template>
@@ -74,14 +80,10 @@ import {
   fetchGenshinData,
   fetchZZZData,
   getCachedData,
-  fetchAllUids
 } from '../api/enka';
 import type { EnkaData } from '../type/genshin';
 import AvatarModal from './AvatarModal.vue';
 import characters from '../dict/characters.json';
-import loc from '../dict/loc.json';
-
-type LocJson = Record<string, Record<string, string>>;
 
 export default defineComponent({
   name: 'EnkaProfile',
@@ -106,28 +108,25 @@ export default defineComponent({
         : t('enka.zenlessArchive')
     );
 
-    // 初始化历史 UID 列表
-    onMounted(async () => {
+    onMounted(() => {
       const stored = localStorage.getItem(gameStorageKey.value);
-      storedUids.value = JSON.parse(stored || '[]'); 
+      storedUids.value = JSON.parse(stored || '[]');
     });
 
-
-    // 切换游戏时重置输入
     watch(selectedGame, (newVal) => {
       uid.value = '';
       const key = `storedUids_${newVal}`;
       const stored = localStorage.getItem(key);
-      storedUids.value = JSON.parse(stored || '[]'); 
+      storedUids.value = JSON.parse(stored || '[]');
     });
 
-    function onUidInput() {
+    const onUidInput = () => {
       uid.value = uid.value.replace(/[^0-9]/g, '');
       const maxLength = selectedGame.value === 'zzz' ? 8 : 9;
       if (uid.value.length > maxLength) {
         uid.value = uid.value.slice(0, maxLength);
       }
-    }
+    };
 
     const handleDatalistSelect = (e: Event) => {
       const input = e.target as HTMLInputElement;
@@ -140,7 +139,6 @@ export default defineComponent({
       });
     };
 
-    // 回车时：只有当格式合法才查询
     const handleEnterKey = () => {
       const required = selectedGame.value === 'zzz' ? 8 : 9;
       if (/^\d+$/.test(uid.value) && uid.value.length === required) {
@@ -151,50 +149,59 @@ export default defineComponent({
     const getCharacterName = (avatarId: string | number) => {
       const char = (characters as any)[String(avatarId)];
       return char
-        ? (loc as LocJson)['zh-cn'][String(char.NameTextMapHash)]
+        ? t(`characters.${char.NameTextMapHash}`, String(avatarId))
         : String(avatarId);
     };
-    const getAvatarSrc = (id: number | string) => `/assets/avatars/${id}.png`;
+
+    const getCharacterLevel = (c: any) => {
+      return c.propMap?.['4001']?.val ?? '?';
+    };
+
+    const getAvatarSrc = (id: number | string) => {
+      const character = (characters as any)[String(id)];
+      if (character && character.SideIconName) {
+        return `https://enka.network/ui/${character.SideIconName}.png`;
+      }
+      return `/assets/avatars/${id}.png`;
+    };
 
     const runAnalysis = async () => {
-      // 等待下一个DOM更新后，失去UID输入框焦点
+      if (isLoading.value) return;
+
       await nextTick();
       uidInput.value?.blur();
-
-      // 设置加载状态为真，并清除错误信息
       isLoading.value = true;
       errorMsg.value = '';
 
       try {
-        // 根据选中的游戏进行不同的数据获取逻辑
         if (selectedGame.value === 'genshin') {
           try {
-            // 尝试从缓存中获取数据
             data.value = await getCachedData(uid.value);
           } catch {
-            // 如果缓存获取失败，将数据设置为null
             data.value = null;
           }
-          // 获取原神的数据
           data.value = await fetchGenshinData(uid.value);
         } else {
-          // 处理ZZZ数据
-          const zzzData = await fetchZZZData(uid.value);
-          // 根据实际数据结构更新...
-          data.value = zzzData;
+          data.value = await fetchZZZData(uid.value);
+        }
+
+        if (!storedUids.value.includes(uid.value)) {
+          storedUids.value.unshift(uid.value);
+          storedUids.value = storedUids.value.slice(0, 10);
+          localStorage.setItem(gameStorageKey.value, JSON.stringify(storedUids.value));
         }
       } catch (e: any) {
-        // 如果数据获取过程中发生错误，设置错误信息
         errorMsg.value = e.message || t('errors.generic');
       } finally {
-        // 无论结果如何，都将加载状态设置为假
         isLoading.value = false;
       }
     };
+
     const openModal = (c: any) => {
       currentCharacter.value = c;
       showModal.value = true;
     };
+
     const closeModal = () => {
       showModal.value = false;
     };
@@ -202,7 +209,7 @@ export default defineComponent({
     return {
       t,
       uid,
-      storedUids,   
+      storedUids,
       isLoading,
       errorMsg,
       data,
@@ -216,23 +223,25 @@ export default defineComponent({
       openModal,
       closeModal,
       getCharacterName,
+      getCharacterLevel,
       getAvatarSrc,
       handleDatalistSelect,
       handleEnterKey,
     };
-  }
+  },
 });
 </script>
 
 <style scoped>
 .enka-profile {
-  place-items: center;
-  max-width: 1200px;
+  max-width: 1600px;
   margin: 2rem auto;
-  padding: 0 1rem;
-  font-family: 'Noto Sans SC', sans-serif;
-  color: #333;
-  position: relative;
+  padding: 0 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .game-tabs {
@@ -423,18 +432,20 @@ export default defineComponent({
 
 .characters-grid {
   display: grid;
-  gap: 1.5rem;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 2rem;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
 }
 
 .char-card {
   background: white;
-  padding: 1rem;
+  padding: 1.5rem;
   border-radius: 1rem;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
 }
 
 .char-card:hover {
@@ -443,18 +454,26 @@ export default defineComponent({
 }
 
 .char-img {
-  width: 80px;
-  height: 80px;
+  width: 70px;
+  height: 70px;
   border-radius: 50%;
-  object-fit: cover;
-  margin: 0 auto 0.75rem;
   border: 2px solid #e2e8f0;
+  overflow: hidden;
+  position: relative;
+}
+
+.char-img img {
+  width: 100%;
+  height: auto;
+  transform: scale(1.2);
+  transform-origin: 50% 100%;
 }
 
 .char-info {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  text-align: left;
 }
 
 .char-name {
@@ -507,6 +526,31 @@ export default defineComponent({
     letter-spacing: normal;
   }
 
+  .characters-grid {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  }
+
+  .char-card {
+    flex-direction: row;
+    padding: 1.5rem;
+    gap: 1.5rem;
+  }
+
+  .char-img {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 2px solid #e2e8f0;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .char-img img {
+    width: 100%;
+    height: auto;
+    transform: scale(1.5);
+    transform-origin: 50% 70%;
+  }
 }
 
 /* 添加错误提示动画 */

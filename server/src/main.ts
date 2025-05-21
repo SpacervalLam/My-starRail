@@ -46,6 +46,17 @@ export async function bootstrap() {
     `);
 
     console.log('genshin_data 表检查/创建完成');
+
+    await dataSource.query(`
+      CREATE TABLE IF NOT EXISTS zzz_data (
+        uid TEXT PRIMARY KEY,
+        player_info JSON NOT NULL,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        ttl INTEGER NOT NULL
+      );
+    `);
+
+    console.log('zzz_data 表检查/创建完成');
   } catch (err) {
     console.error('初始化数据库表失败：', err);
   }

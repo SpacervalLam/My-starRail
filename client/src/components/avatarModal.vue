@@ -45,7 +45,6 @@
 import { defineComponent, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import characters from '../dict/characters.json';
-import loc from '../dict/loc.json';
 
 type LocJson = {
   [lang: string]: {
@@ -66,7 +65,7 @@ export default defineComponent({
 
     const getPropName = (key: string | number) => {
       const keyStr = String(key);
-      return t(`props.${keyStr}`) || keyStr;
+      return t(`characters.${keyStr}`) || keyStr;
     };
 
     const formatStatValue = (key: string | number, value: number) => {
@@ -93,12 +92,10 @@ export default defineComponent({
     };
 
     const getCharacterName = (avatarId: string) => {
-      const character = characters[avatarId as keyof typeof characters];
-      if (!character) return avatarId;
-      
-      const nameTextMapHash = character.NameTextMapHash;
-      const zhName = (loc as LocJson)['zh-cn'][String(nameTextMapHash)];
-      return zhName || avatarId;
+      const char = (characters as any)[String(avatarId)];
+      return char
+        ? t(`characters.${char.NameTextMapHash}`, avatarId)
+        : avatarId;
     };
 
     const modalRef = ref<HTMLElement | null>(null);
