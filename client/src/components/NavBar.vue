@@ -2,7 +2,7 @@
   <nav class="navbar">
     <div class="navbar-content">
       <div class="brand">
-        <img src="/assets/logo.png" alt="App Logo" class="logo" :aria-label="t('navbar.logoAlt')" />
+        <img :src="`${baseUrl}assets/logo.png`" alt="App Logo" class="logo" :aria-label="t('navbar.logoAlt')" />
         <h1 class="app-title">{{ t('navbar.title') }}</h1>
       </div>
 
@@ -35,6 +35,7 @@ import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import SettingsModal from './SettingsModal.vue';
 
+const baseUrl = import.meta.env.BASE_URL;
 const { t, locale } = useI18n({
   useScope: 'global',
   inheritLocale: true

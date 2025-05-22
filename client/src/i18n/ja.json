@@ -19,7 +19,7 @@
   "summary": {
     "totalPulls": "総ガチャ回数",
     "fiveStar": "★5の数",
-    "currentPity": "現在の最大天井"
+    "currentPity": "現在の天井"
   },
   "gamePools": {
     "starrail": {

@@ -51,6 +51,14 @@ function createWindow() {
     : 'http://localhost:5173';
 
   mainWindow.loadURL(url);
+  mainWindow.webContents.on('before-input-event', (event, input) => {
+    const isCtrlShiftI =
+      input.control && input.shift && input.code === 'KeyI';
+    if (isCtrlShiftI) {
+      mainWindow.webContents.toggleDevTools();
+      event.preventDefault();
+    }
+  });
   mainWindow.on('closed', () => { mainWindow = null; });
 }
 

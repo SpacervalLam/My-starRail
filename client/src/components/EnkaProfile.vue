@@ -80,6 +80,7 @@ import {
   fetchGenshinData,
   fetchZZZData,
   getCachedData,
+  fetchAllUids,
 } from '../api/enka';
 import type { EnkaData } from '../type/genshin';
 import AvatarModal from './AvatarModal.vue';
@@ -100,24 +101,25 @@ export default defineComponent({
     const uidInput = ref<HTMLInputElement>();
     const selectedGame = ref<'genshin' | 'zzz'>('genshin');
 
-    const gameStorageKey = computed(() => `storedUids_${selectedGame.value}`);
-
     const queryButtonText = computed(() =>
       selectedGame.value === 'genshin'
         ? t('enka.genshinArchive')
         : t('enka.zenlessArchive')
     );
 
-    onMounted(() => {
-      const stored = localStorage.getItem(gameStorageKey.value);
-      storedUids.value = JSON.parse(stored || '[]');
+    onMounted(async () => {
+      try {
+        storedUids.value = await fetchAllUids();
+      } catch (err) {
+        console.error('获取UID列表失败:', err);
+        storedUids.value = [];
+      }
     });
 
-    watch(selectedGame, (newVal) => {
+
+    watch(selectedGame, () => {
       uid.value = '';
-      const key = `storedUids_${newVal}`;
-      const stored = localStorage.getItem(key);
-      storedUids.value = JSON.parse(stored || '[]');
+      storedUids.value = [];
     });
 
     const onUidInput = () => {
@@ -188,7 +190,6 @@ export default defineComponent({
         if (!storedUids.value.includes(uid.value)) {
           storedUids.value.unshift(uid.value);
           storedUids.value = storedUids.value.slice(0, 10);
-          localStorage.setItem(gameStorageKey.value, JSON.stringify(storedUids.value));
         }
       } catch (e: any) {
         errorMsg.value = e.message || t('errors.generic');

@@ -2,11 +2,11 @@
   <div class="gacha-analyzer"> <!-- 游戏类型选择器 -->
     <div class="game-type-selector">
       <div class="type-card" :class="{ active: gameType === GameType.StarRail }" @click="gameType = GameType.StarRail">
-        <img src="/assets/icon/star-rail-icon.png" alt="Star Rail">
+        <img :src="`${baseUrl}assets/icon/star-rail-icon.png`" alt="Star Rail">
         <span>{{ t('gameTypes.starrail') }}</span>
       </div>
       <div class="type-card" :class="{ active: gameType === GameType.Zenless }" @click="gameType = GameType.Zenless">
-        <img src="/assets/icon/zenless-icon.png" alt="Zenless">
+        <img :src="`${baseUrl}assets/icon/zenless-icon.png`" alt="Zenless">
         <span>{{ t('gameTypes.zenless') }}</span>
       </div>
     </div>
@@ -38,18 +38,18 @@
       <!-- 分析按钮 -->
       <button class="btn analyze-btn" :disabled="loading || (queryMode === 'uid' ? !canAnalyze : !gachaUrl)"
         @click="runAnalysis">
-    <template v-if="loading">
-      <i class="icon-loading"></i> {{ t('controls.analyzing') }}
-    </template>
-    <template v-else>
-      <i class="icon-play"></i> {{ t('controls.analyze') }}
-    </template>
+        <template v-if="loading">
+          <i class="icon-loading"></i> {{ t('controls.analyzing') }}
+        </template>
+        <template v-else>
+          <i class="icon-play"></i> {{ t('controls.analyze') }}
+        </template>
       </button>
     </div>
 
     <!-- 全局 Loading 显示 -->
     <div v-if="loading" class="loading-container">
-      <img src="/assets/gif/loading.gif" alt="Loading" class="loading-gif">
+      <img :src="`${baseUrl}assets/gif/loading.gif`" alt="Loading" class="loading-gif">
       <span class="loading-text">{{ t('controls.loading') }}</span>
     </div>
 
@@ -65,10 +65,10 @@
           <h3>⭐ {{ t('summary.fiveStar') }}</h3>
           <div class="value">{{ totalFiveStar }}</div>
         </div>
-        <!-- <div class="card summary-item">
+        <div class="card summary-item">
           <h3>🔋 {{ t('summary.currentPity') }}</h3>
           <div class="value">{{ maxCurrentPity }}</div>
-        </div> -->
+        </div>
       </div>
 
       <!-- 卡池标签页 -->
@@ -109,7 +109,7 @@
             <div class="five-star-grid">
               <div v-for="item in entry.analysis.fiveStarDetails" :key="item.name" class="five-star-card"
                 :class="{ highlight: isNewestFiveStar(item, entry) }">
-                <img class="avatar" :src="`assets/avatars/${item.item_id}.png`" :alt="item.name" />
+                <img class="avatar" :src="`${baseUrl}assets/avatars/${item.item_id}.png`" :alt="item.name" />
                 <div class="detail">
                   <div class="name">{{ item.name }}</div>
                   <div class="stats">
@@ -120,11 +120,7 @@
                       }) }}
                     </span>
                   </div>
-                  <div class="timeline">
-                    <div v-for="(pull, idx) in item.pulls" :key="idx" class="timeline-item" :style="{ flex: pull }">
-                      <span class="tooltip">{{ pull }} {{ t('controls.pulls') }}</span>
-                    </div>
-                  </div>
+
                 </div>
               </div>
             </div>
@@ -175,6 +171,8 @@ import {
   GachaAnalysis,
 } from '../utils/analyzeGacha';
 import { format } from 'date-fns';
+
+const baseUrl = import.meta.env.BASE_URL;
 
 const { t } = useI18n({
   useScope: 'global',
@@ -263,39 +261,58 @@ function handleEnterKey() {
 
 async function runAnalysis() {
   const currentGameType = gameType.value;
+  console.debug('[GachaAnalyzer] 开始分析，游戏类型:', currentGameType);
+  console.debug('[GachaAnalyzer] 基础URL:', baseUrl);
+  
   if (queryMode.value === 'uid') {
     const isStarRail = currentGameType === GameType.StarRail;
     const isValid = isStarRail
       ? /^[1-9]\d{8}$/.test(uid.value)
       : /^[1-9]\d{7}$/.test(uid.value);
     if (!isValid) {
+      console.warn('[GachaAnalyzer] 无效的UID:', uid.value);
       return alert(`请输入有效的 UID（${isStarRail ? '9' : '8'} 位数字，不以 0 开头）`);
     }
   }
   if (queryMode.value === 'url' && !gachaUrl.value) {
+    console.warn('[GachaAnalyzer] 缺少抽卡记录URL');
     return alert('请输入抽卡记录 URL');
   }
+
   loading.value = true;
+  console.debug('[GachaAnalyzer] 开始加载数据...');
+  
   try {
     let data: Record<string, GachaLogItem[]> = {};
     if (queryMode.value === QueryMode.UID) {
-      console.log(`发送请求：gacha/logs ${currentGameType}`, uid.value);
+      console.debug(`[GachaAnalyzer] 发送UID请求: ${currentGameType}`, {uid: uid.value});
       await refreshGachaLogs(uid.value, currentGameType);
       data = await fetchGachaLogs(uid.value);
+      console.debug('[GachaAnalyzer] 获取到抽卡记录数据:', {count: Object.values(data).flat().length});
     } else if (queryMode.value === QueryMode.URL) {
-      console.log(`发送请求：gacha/refresh/url ${currentGameType}`, gachaUrl.value);
+      console.debug(`[GachaAnalyzer] 发送URL请求: ${currentGameType}`, {url: gachaUrl.value});
       const uidFromUrl = await refreshGachaLogsFromUrl(gachaUrl.value, currentGameType);
       data = await fetchGachaLogs(uidFromUrl);
+      console.debug('[GachaAnalyzer] 从URL获取到抽卡记录数据:', {uid: uidFromUrl, count: Object.values(data).flat().length});
     }
+
     groupedLogs.value = data;
     analysisResults.value = Object.fromEntries(
-      poolOrder.value.map((poolId: string) => [poolId, analyzeGachaLogs(data[poolId] || [])])
+      poolOrder.value.map((poolId: string) => {
+        const logs = data[poolId] || [];
+        console.debug(`[GachaAnalyzer] 分析卡池 ${poolId}`, {count: logs.length});
+        return [poolId, analyzeGachaLogs(logs)];
+      })
     );
+    console.debug('[GachaAnalyzer] 分析完成', {totalPulls: totalPulls.value});
   } catch (e: any) {
+    console.error('[GachaAnalyzer] 分析过程中出错:', e);
     let errorMsg = e.message;
     const retcodeMatch = e.message.match(/retcode=(-?\d+)/);
     if (retcodeMatch) {
       const retcode = parseInt(retcodeMatch[1]);
+      console.error('[GachaAnalyzer] 错误码:', retcode);
+      
       switch (retcode) {
         case -100:
           errorMsg = '请求参数错误: 检查URL中是否缺少必填参数或参数格式错误';
@@ -331,11 +348,13 @@ async function runAnalysis() {
           errorMsg = '未知错误: 请联系作者spacervallam@gmail.com';
       }
     }
+    console.error('[GachaAnalyzer] 错误信息:', errorMsg);
     alert(`操作失败：${errorMsg}`);
     groupedLogs.value = {};
     analysisResults.value = {};
   } finally {
     loading.value = false;
+    console.debug('[GachaAnalyzer] 加载状态结束');
   }
 }
 
@@ -357,9 +376,10 @@ const totalPulls = computed(() =>
 const totalFiveStar = computed(() =>
   entries.value.reduce((sum, e) => sum + e.analysis.fiveStarCount, 0)
 );
-const maxCurrentPity = computed(() =>
-  Math.max(...entries.value.map((e) => e.analysis.currentPity))
-);
+const maxCurrentPity = computed(() => {
+  const characterEntry = entries.value.find(e => e.poolId === '11');
+  return characterEntry ? characterEntry.analysis.currentPity : 0;
+});
 
 const isNewestFiveStar = (
   item: { name: string; lastTime: string },
@@ -388,8 +408,10 @@ const isNewestFiveStar = (
   align-items: center;
   gap: 0.5rem;
   padding: 0.4rem 0.6rem;
-  flex-direction: row; /* 横向排列图标和文字 */
-  width: auto; /* 根据内容自动宽度 */
+  flex-direction: row;
+  /* 横向排列图标和文字 */
+  width: auto;
+  /* 根据内容自动宽度 */
   height: auto;
   background: rgba(255, 255, 255, 0.9);
   border-radius: 8px;
@@ -545,19 +567,29 @@ const isNewestFiveStar = (
 }
 
 @keyframes bounce {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0);
   }
+
   50% {
     transform: translateY(-3px);
   }
 }
 
 .summary-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  display: flex;
+  justify-content: space-around;
   margin-bottom: 3rem;
-  justify-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.summary-item {
+  flex: 1;
+  min-width: 200px;
+  max-width: 300px;
 }
 
 .summary-item {
@@ -629,7 +661,7 @@ const isNewestFiveStar = (
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08),
-              0 2px 6px rgba(0, 0, 0, 0.05);
+    0 2px 6px rgba(0, 0, 0, 0.05);
   position: relative;
   border: 1px solid rgba(0, 0, 0, 0.03);
   transition: all 0.3s ease;
@@ -638,20 +670,23 @@ const isNewestFiveStar = (
 .five-star-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12),
-              0 3px 8px rgba(0, 0, 0, 0.08);
+    0 3px 8px rgba(0, 0, 0, 0.08);
 }
 
 .five-star-card.highlight {
   border: 2px solid var(--rank-5);
   box-shadow: 0 4px 20px rgba(75, 85, 99, 0.15),
-              0 2px 6px rgba(75, 85, 99, 0.1);
+    0 2px 6px rgba(75, 85, 99, 0.1);
 }
 
 .avatar {
-  width: 60px;
-  height: 60px;
+  width: 64px;
+  height: 64px;
   background: #dee2e6;
   border-radius: 50%;
+  object-fit: contain;
+  max-width: 100%;
+  max-height: 100%;
 }
 
 .detail {
@@ -677,19 +712,6 @@ const isNewestFiveStar = (
   font-size: 0.85rem;
 }
 
-.timeline {
-  display: flex;
-  gap: 2px;
-  height: 8px;
-  background: #e9ecef;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.timeline-item {
-  position: relative;
-}
-
 .tooltip {
   visibility: hidden;
   position: absolute;
@@ -701,10 +723,6 @@ const isNewestFiveStar = (
   padding: 0.2rem 0.4rem;
   border-radius: 4px;
   font-size: 0.75rem;
-}
-
-.timeline-item:hover .tooltip {
-  visibility: visible;
 }
 
 .expandable-section {

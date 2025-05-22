@@ -19,7 +19,7 @@
   "summary": {
     "totalPulls": "总抽卡次数",
     "fiveStar": "五星总数",
-    "currentPity": "当前最大保底"
+    "currentPity": "角色池已垫抽数"
   },
   "gamePools": {
     "starrail": {
