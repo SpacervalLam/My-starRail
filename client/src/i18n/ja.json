@@ -49,7 +49,18 @@
     "logoAlt": "アプリケーションロゴ",
     "menuButton": "ナビゲーションメニューを開く",
     "language": "言語",
-    "settings": "設定"
+    "settings": "設定",
+    "closeApp": "アプリを閉じる"
+  },
+  "welcome": {
+    "title": "名前未定のツールへようこそ",
+    "subtitle": "サイドバーから機能を選択してください",
+    "gachaAnalysis": "ガチャ分析",
+    "gachaAnalysisDesc": "ガチャ履歴の詳細な分析",
+    "profile": "プレイヤープロフィール",
+    "profileDesc": "プレイヤープロフィールの閲覧と管理",
+    "moreFeatures": "その他の機能",
+    "moreFeaturesDesc": "近日公開予定"
   },
   "settings": {
     "title": "設定",

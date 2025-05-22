@@ -109,7 +109,16 @@
             <div class="five-star-grid">
               <div v-for="item in entry.analysis.fiveStarDetails" :key="item.name" class="five-star-card"
                 :class="{ highlight: isNewestFiveStar(item, entry) }">
-                <img class="avatar" :src="`${baseUrl}assets/avatars/${item.item_id}.png`" :alt="item.name" />
+                <img class="avatar" 
+                     :src="gameType === GameType.Zenless && activeTab === '5001'
+                           ? 'https://enka.network/ui/zzz/IconInterknotActivityCollaboration01.png'
+                           : gameType === GameType.Zenless && activeTab === '3002'
+                           ? `https://enka.network${weapons[item.item_id]?.CircleIcon || ''}`
+                           : gameType === GameType.Zenless
+                           ? `https://enka.network${avatars[item.item_id]?.CircleIcon || ''}`
+                           : `${baseUrl}assets/avatars/${item.item_id}.png`" 
+                     :alt="item.name" 
+                     @error="handleAvatarError" />
                 <div class="detail">
                   <div class="name">{{ item.name }}</div>
                   <div class="stats">
@@ -157,6 +166,40 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick } from 'vue';
+import rawAvatars from '../dict/avatars.json';
+import rawWeapons from '../dict/weapons.json';
+
+interface WeaponData {
+  Name: string;
+  Rarity: number;
+  ProfessionType: string;
+  CircleIcon: string;
+  MainStat: Record<string, unknown>;
+  SecondaryStat: Record<string, unknown>;
+}
+
+interface AvatarData {
+  Name: string;
+  Rarity: number;
+  ProfessionType: string;
+  ElementTypes: string[];
+  Image: string;
+  CircleIcon: string;
+  WeaponId: number;
+  Skins: Record<string, unknown>;
+  Colors: {
+    Accent: string;
+    Mindscape: string;
+  };
+  HighlightProps: number[];
+  BaseProps: Record<string, unknown>;
+  GrowthProps: Record<string, unknown>;
+  PromotionProps: Record<string, unknown>[];
+  CoreEnhancementProps: Record<string, unknown>[];
+}
+
+const avatars: Record<string, AvatarData> = rawAvatars;
+const weapons: Record<string, WeaponData> = rawWeapons;
 import { useI18n } from 'vue-i18n';
 import {
   refreshGachaLogs,
@@ -171,6 +214,11 @@ import {
   GachaAnalysis,
 } from '../utils/analyzeGacha';
 import { format } from 'date-fns';
+
+function handleAvatarError(e: Event) {
+  const img = e.target as HTMLImageElement;
+  img.src = `${baseUrl}assets/avatars/default.png`;
+}
 
 const baseUrl = import.meta.env.BASE_URL;
 
@@ -219,7 +267,14 @@ const handleDatalistSelect = (e: Event) => {
   const target = e.target as HTMLInputElement;
   nextTick(() => {
     target.blur();
-    if (target.value.length === 9) runAnalysis();
+    const isValidLength = gameType.value === GameType.Zenless 
+      ? target.value.length === 8 
+      : target.value.length === 9;
+    if (isValidLength) {
+      runAnalysis();
+      // 分析完成后默认选中第一个卡池
+      activeTab.value = poolOrder.value[0];
+    }
   });
 };
 
@@ -265,13 +320,13 @@ async function runAnalysis() {
   console.debug('[GachaAnalyzer] 基础URL:', baseUrl);
   
   if (queryMode.value === 'uid') {
-    const isStarRail = currentGameType === GameType.StarRail;
-    const isValid = isStarRail
-      ? /^[1-9]\d{8}$/.test(uid.value)
-      : /^[1-9]\d{7}$/.test(uid.value);
+    const isValid = /^[1-9]\d*$/.test(uid.value) && 
+      (currentGameType === GameType.Zenless 
+        ? uid.value.length === 8 
+        : uid.value.length === 9);
     if (!isValid) {
       console.warn('[GachaAnalyzer] 无效的UID:', uid.value);
-      return alert(`请输入有效的 UID（${isStarRail ? '9' : '8'} 位数字，不以 0 开头）`);
+      return alert(`请输入有效的 UID（${currentGameType === GameType.Zenless ? '8' : '9'} 位数字，不以 0 开头）`);
     }
   }
   if (queryMode.value === 'url' && !gachaUrl.value) {

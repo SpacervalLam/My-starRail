@@ -117,9 +117,12 @@ export default defineComponent({
     });
 
 
-    watch(selectedGame, () => {
+    watch(selectedGame, (newGame) => {
       uid.value = '';
       storedUids.value = [];
+      if (newGame === 'zzz') {
+        alert('功能暂未实现/Feature not available yet/機能はまだ利用できません');
+      }
     });
 
     const onUidInput = () => {
@@ -187,8 +190,8 @@ export default defineComponent({
           data.value = await fetchZZZData(uid.value);
         }
 
-        if (!storedUids.value.includes(uid.value)) {
-          storedUids.value.unshift(uid.value);
+        if (!(storedUids.value || []).includes(uid.value || '')) {
+          storedUids.value = [...(storedUids.value || []), uid.value];
           storedUids.value = storedUids.value.slice(0, 10);
         }
       } catch (e: any) {

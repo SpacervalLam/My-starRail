@@ -1,6 +1,6 @@
 {
   "name": "My-starRail",
-  "version": "1.4.0",
+  "version": "1.4.5",
   "description": "Tools for Honkai: Star Rail",
   "main": "electron-main.js",
   "author": "SpacervalLam <spacervallam@gmail.com>",

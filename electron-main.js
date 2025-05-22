@@ -41,7 +41,7 @@ async function startBackend() {
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1200, height: 800, autoHideMenuBar: true,
+    width: 1200, height: 800, autoHideMenuBar: true, resizable: false, frame: false,
     webPreferences: { nodeIntegration: false, contextIsolation: true }
   });
   Menu.setApplicationMenu(null);

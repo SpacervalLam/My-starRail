@@ -24,7 +24,7 @@
             </div>
           </div>
           
-          <div class="character-equipment">
+          <!-- <div class="character-equipment">
             <div 
               v-for="equip in character.equipList" 
               :key="equip.itemId" 
@@ -34,7 +34,7 @@
               <p v-if="equip.weapon">武器等级: Lv.{{ equip.weapon.level }}</p>
               <p v-if="equip.reliquary">圣遗物等级: +{{ equip.reliquary.level }}</p>
             </div>
-          </div>
+          </div> -->
         </div>
       </div>
     </div>
@@ -65,7 +65,7 @@ export default defineComponent({
 
     const getPropName = (key: string | number) => {
       const keyStr = String(key);
-      return t(`characters.${keyStr}`) || keyStr;
+      return t(`props.${keyStr}`) || keyStr;
     };
 
     const formatStatValue = (key: string | number, value: number) => {

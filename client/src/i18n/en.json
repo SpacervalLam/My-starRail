@@ -12,9 +12,9 @@
     "gameType": "Game Type"
   },
   "gameTypes": {
-    "starrail": "Honkai: Star Rail",
+    "starrail": "Star Rail",
     "zenless": "ZZZ",
-    "genshin": "Genshin"
+    "genshin": "GI"
   },
   "summary": {
     "totalPulls": "Total Pulls",
@@ -49,7 +49,18 @@
     "logoAlt": "Application Logo",
     "menuButton": "Open navigation menu",
     "language": "Language",
-    "settings": "Settings"
+    "settings": "Settings",
+    "closeApp": "Close App"
+  },
+  "welcome": {
+    "title": "Welcome to the tool which is unnamed yet",
+    "subtitle": "Please select a feature from the sidebar to get started",
+    "gachaAnalysis": "Gacha Analysis",
+    "gachaAnalysisDesc": "Detailed analysis of your gacha history",
+    "profile": "Player Profile",
+    "profileDesc": "View and manage player profiles",
+    "moreFeatures": "More Features",
+    "moreFeaturesDesc": "Coming soon, stay tuned"
   },
   "settings": {
     "title": "Settings",
