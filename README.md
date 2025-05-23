@@ -18,7 +18,6 @@ A desktop application for analyzing **Honkai: Star Rail**, **Zenless Zone Zero**
 2. Wait for the analysis to complete. Click any item in the list to view detailed information.
 
 > ⚠️ Port 3168 is hardcoded; please ensure no other applications are occupying it.
-> (Yes, it's the first 4 digits of my QQ number 😅)
 
 ### ✅ Genshin Impact
 
